@@ -1,5 +1,5 @@
-\name{dataexample.rd}
-\alias{dataexample.rd}
+\name{dataexample}
+\alias{dataexample}
 \docType{data}
 \title{
 dataexample
