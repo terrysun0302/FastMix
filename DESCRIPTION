@@ -1,11 +1,14 @@
 Package: FastMix
 Type: Package
-Title: What the Package Does (Title Case)
+Title: An OLS-based approach for LMER (Title Case)
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
-License: What license is it under?
+Author: Hao Sun
+Maintainer: Hao Sun <terrysun0302@gmail.com>
+Description: fit linear mixed model by an OLS approach
+License: GPL-3
+Depends: R (>= 3.2.0), dplyr(>= 0.7.6)
 Encoding: UTF-8
 LazyData: true
+Suggests: knitr,
+    rmarkdown
+VignetteBuilder: knitr
