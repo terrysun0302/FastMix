@@ -68,5 +68,7 @@ Y <- dataexample$Y
 ## fit the model
 mod <- ols.eblup(Des, Y, random = c(1,2,3,4), independent = T,type = "chi")
 
-%\keyword{ ~linear mixed model }% use one of  RShowDoc("KEYWORDS")
+}                               % end examples.
+
+\keyword{models}% use one of  RShowDoc("KEYWORDS")
 %\keyword{ ~random effects }% __ONLY ONE__ keyword per line

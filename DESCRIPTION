@@ -1,7 +1,7 @@
 Package: FastMix
 Type: Package
 Title: An OLS-based approach for LMER (Title Case)
-Version: 0.1.0
+Version: 0.2.0
 Author: Hao Sun
 Maintainer: Hao Sun <terrysun0302@gmail.com>
 Description: fit linear mixed model by an OLS approach

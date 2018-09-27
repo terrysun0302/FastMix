@@ -1,58 +1,105 @@
 ---
-title: "Vignette Title"
-author: "Hao Sun"
+title: "FastMix User Guide"
+author: "Hao Sun, Xing Qiu"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteIndexEntry{FastMix User Guide}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
-Vignettes are long form documentation commonly included in packages. Because they are part of the distribution of the package, they need to be as compact as possible. The `html_vignette` output type provides a custom style sheet (and tweaks some options) to ensure that the resulting html is as small as possible. The `html_vignette` format:
+```{r load-package}
 
-- Never uses retina figures
-- Has a smaller default figure size
-- Uses a custom CSS stylesheet instead of the default Twitter Bootstrap style
+library(FastMix)
 
-## Vignette Info
-
-Note the various macros within the `vignette` section of the metadata block above. These are required in order to instruct R how to build the vignette. Note that you should change the `title` field and the `\VignetteIndexEntry` to match the title of your vignette.
-
-## Styles
-
-The `html_vignette` template includes a basic CSS theme. To override this theme you can specify your own CSS in the document metadata as follows:
-
-    output: 
-      rmarkdown::html_vignette:
-        css: mystyles.css
-
-## Figures
-
-The figure sizes have been customised so that you can easily put two images side-by-side. 
-
-```{r, fig.show='hold'}
-plot(1:10)
-plot(10:1)
 ```
 
-You can enable figure captions by `fig_caption: yes` in YAML:
 
-    output:
-      rmarkdown::html_vignette:
-        fig_caption: yes
+In this Vignette, we describe the basic usage of the `FastMix` package. This package implements a fast parameter estimation and hypothesis testing framework for a special type of linear mixed effects model inspired by the deconvolution project.  Below we describe the inspiring problem, the mathematical model, and the usage of the main R function, `FastMix()`. 
 
-Then you can use the chunk option `fig.cap = "Your figure caption."` in **knitr**.
+## Introduction
 
-## More Examples
+We will briefly describe a motivating problem for which the `FastMix` package is applicable.
 
-You can write math expressions, e.g. $Y = X\beta + \epsilon$, footnotes^[A footnote here.], and tables, e.g. using `knitr::kable()`.
+In most genomic studies, gene expressions are quantified from a mixture of heterogeneous cells.  In certain cases, we may have matching phenotype data (often from flow-cytometry) which quantify the proportion of $k=1, 2, \dots, K$ types of cells in the sample. One popular task is to use the observed cell proportions to "deconvolute" the mixed gene expressions, namely, to obtain cell-specific gene expressions for each subject (henceforth denoted as $b_{kij}$, for the $k$th cell, $i$th gene, $j$th subject). 
 
-```{r, echo=FALSE, results='asis'}
-knitr::kable(head(mtcars, 10))
-```
+In a sense, the need for producing *subject-specific* expressions is primarily driven by the downstream statistical analysis, in which $b_{kij}$ are considered as new observations to be associated with subject-specific clinical covariates, such as the disease severity, age, and sex.
 
-Also a quote using `>`:
+From the statistical perspective, the main difficulty of the above approach is that the deconvolution step is a typical "large $p$, small $n$" problem.  For each gene, we have $n$ observations of the mixed gene expression; yet our goal is to produce $Kn$ estimates for each subject ($i=1, 2, \dots, n$) and each type of cell ($k=1, 2, \dots, K$).  While it is theoretically doable based on certain penalized regression, the resulting cell-specific expressions will inevitably have high level of variance.
 
-> "He who gives up [code] safety for [code] speed deserves neither."
-([via](https://twitter.com/hadleywickham/status/504368538874703872))
+In this study, we take a different approach, namely, to combine the deconvolution step with the downstream analysis into a **single** mixed effects model.  The advantages of doing so are:
+
+1. Cell-specific gene expressions are modeled as a mixture of fixed and random effects, so each subject (and each cell, each gene) can have a different estimate $\hat{b}_{kij}$ via EBLUP (empirical best linear unbiased predictor).
+2. The degrees of freedom (unknown parameters) of the above model is small. Specifically, subject-specific variation of $\hat{b}_{kij}$ is controlled by clinical covariates via a linear model.
+2. The primary inference is based on the interaction between the cell proportions and clinical covariates, which pools all subjects, so there is no "small $n$, large $p$" problem. The results will be a set of $p$-values for each cell type and each clinical covariate.
+3. We also developed a novel gene prioritizing procedure based on the theory of outliers.  More specifically, among all the predicted random effect terms (cell, covariate, and gene) for a fixed cell and covariate, we will be able to identify those genes that are significantly different from the majority of genes. The result will be a 3D tensor of $p$-values for cell, covariate, and gene, as well as the the direction and magnitude of this random interaction term being greater than the average.
+
+In summary, we have designed a **one-step** inferential framework based on mixed effects regression and outlier analysis for the deconvolution analysis that greatly reduces the model complexity, yet still flexible enough to produce estimates of the association between the cell-specific gene expressions and clinical covariates, as well as their corresponding $p$-values for each gene, cell, and covariate.
+
+## Mathematical model
+
+Based on a simple additive model, $Y_{ji}$, the expression level of the $i$th gene, $i=1, 2, \dots, m$ for the $j$th subject, $j=1, 2, \dots, n$, can be described as 
+
+$$Y_{ji} = \sum_{k=1}^{K} C_{jk} b_{kij} + \sum_{p=1}^{P} Z_{jp} d_{pi} + \epsilon_{ji}. $$
+
+Here $C_{jk}$ is the proportion of the $k$th cell for the $j$th subject (measured by e.g., flow-cytometry); $b_{kij}$ is the expression of the $i$th gene produced by one unit of $k$th cell for the $j$th subject; $Z_{jp}$ is the value of the $p$th **standardized** clinical variable (such as age, sex, and severity; standardized so that all of them have mean zero and unit standard deviation therefore directly comparable) of the $j$th subject; $d_{pi}$ is the association of the $p$th clinical covariate to the $i$th gene; and $\epsilon_{ji}$ is the error term.  We further assume that the cell-specific expression, $b_{kij}$, and covariate-specific association, $d_{pi}$, have the following mixed effects structure 
+
+$$ b_{kij} = b_{k} + u_{ki} + \sum_{p=1}^{P} Z_{jp} (a_{pk} + \alpha_{pki}), \qquad d_{pi} = \delta_{p} + e_{pi}. $$
+
+Here $b_{k}$ is the mean contribution to expression from the $k$th cell to all genes; $u_{ki}$ is a random effect term specific to the $i$th gene;  $a_{pk}$ represents the mean (over all subjects and genes) association between $Z_{jp}$ and $b_{kij}$; and $\alpha_{pki}$ is a random effect term that describes the association of $Z_{jp}$ and a specific gene; $\delta_{p}$ is the overall association of $p$ to all genes and $e_{pi}$ is a random effect that describes the association between the $p$th covariate and the $i$th gene.
+
+We may merge the first two equations and obtain the following **combined model**
+
+$$ Y_{ji} = X_{jl} \left( \beta_{l} + \gamma_{li} \right) + \epsilon_{ji}. $$
+
+Here $X_{\cdot, \cdot}$ is the combined covariate matrix and it includes $C_{jk}$, $Z_{jp}$, and $C_{jk} Z_{jp}$. For example, if we have three types of cells and two clinical covariates, the total number of covariates would be $L = 3 + 2 + 3\times 2 = 11$. $\beta_{l}$ is the contribution of $X_{\cdot,l}$ (could be $C$, $Z$, or their interaction) to the entire transcriptome, and $\gamma_{li}$ is the random effect term that characterizes the effect of $X_{\cdot,l}$ to a specific gene.
+
+## Computational challenge and the Fast LMER algorithm
+
+The above model is a standard LMER so it can be fitted by a stock mixed effects regression software, such as R package `lme4`, the reference implementation of LMER in R.  However, due to the high-throughput nature of the data, fitting such a large regression model is computationally very demanding.  Furthermore, there are occasional convergence issues due to the use of the EM algorithm in `lme4`.
+
+Instead, we developed an efficient estimation framework based on an initial OLS regression, moment method, and the EBLUP.
+
+
+## The outlier detection algorithm for the predicted random effects
+
+In addition, we also developed a hypothesis testing method to check that, for a given $l$, whether the estimated random effect for a specific gene ($\gamma_{li}$) is significantly different from its "main distribution".  Specifically, we consider that the previous **combined model** only describes the distribution of the majority of genes; and there may be small subsets of genes that have different distribution of linear coefficients.  In other words, if gene $i$ is in this subset, its linear coefficient associated some $X_{\cdot l}$ does **not** follow $N(\beta_{l}, \sigma_{\gamma_{l}}^2)$, and could be detected as an **outlier** from the major distribution.
+
+
+Technical details are summarized in another document, `FAST_LMER_project.pdf`
+
+## Usage examples
+
+The primary function in our package is `FastMix()`.  It takes the following primary arguments: `GeneExp`, `CellProp`, `Clinical`, and `random`. Here `GeneExp` is a $m\times n$ dimensional gene expression matrix; `CellProp` is a $n\times K$ dimensional matrix of cell proportions; `Clinical` is a $n\times P$ dimensional matrix of clinical and demographic variables to be tested; `random` is an index vector that specifies which variable(s) requires random effects -- by default, all covariates are paired with a random effect.
+
+(**[09/21/2018 Remark]** to be renamed to `FastMix()` in the next version).
+
+
+`ols.eblup.trim()`  It takes the following arguments: `Des`, `Y`, `random`, `independent`, `trim`, and `type`. Here `Des` is the design matrix ordered by Gene times 
+
+## Simulation 
+
+To be written by Hao Sun later.  The following is a simulated example created by Xing on 09/24/2018.
+
+In this simulated study, there are $m=`r m`$ genes and $n=`r n`$ subjects. There are three cell types and the data are stored in object `CellProp`.  I created a clinical dataset called `Demo`, which consists of two variables, `Severity` and `Sex`.  Based on the previous discussion, the observed bulk gene expression may be associated with a total of $L=11$ covariates: 3 cell proportions, 2 clinical variables, and 6 of the interaction terms.  
+
+I created true associations between the covariates and gene expressions in this way. 
+
+1. Cell1 has overall association with all gene expressions; Cell 2 and 3 does not. Using previous notation, $b_1 = `r bb[1]`$, $b_2 = `r bb[2]`$, $b_3 = `r bb[3]`$.  
+2. The majority of the genes are associated with these cells with coefficients sampled from $N(0, \sigma_{u}^{2})$, $\sigma_{u}^{2} = `r sigma2.u`$.
+3. Neither Severity nor Sex has overall association with the entire transcriptome.  The majority of their coefficients follow $N(0, \sigma_{e}^{2})$, $\sigma_{e}^{2} = `r sigma2.e`$.
+4. The interaction between Cell1 and Severity has an overall impact on the transcriptome; the corresponding coefficients follows $N(\beta_6, \sigma_{\alpha}^2)$, $\beta_6 = `r aa[1]`$, $\sigma_{\alpha}^2 = `r sigma2.alpha`$.
+5. All other interaction terms do not have overall association with the transcriptome.
+2. The first 100 genes have strong association with Cell1, such that $b_{1i} = b_{1} \pm 3$, with equal probability of positive or negative shift. In other words, their linear coefficients are outliers w.r.t. the major distribution.
+3. The linear coefficients between Genes 101 - 200 and Cell2 are outliers created in the same way ($\pm 3$ units).
+4. In the same way, each $l$th block of 100 gene are the outliers associated with the $l$th covariate.
+5. The variance of the noise, $\sigma_{\epsilon}^2$, is `r sigma2.err`.
+
+
+
+
+## Real data example
+
+To be written later based on the UR/JCVI collaboration on the RPRC data.
+

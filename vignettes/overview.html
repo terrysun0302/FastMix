@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<meta name="author" content="Hao Sun, Xing Qiu" />
+
+<meta name="date" content="2018-09-24" />
+
+<title>FastMix User Guide</title>
+
+
+
+
+
+
+<link href="data:text/css;charset=utf-8,body%20%7B%0Abackground%2Dcolor%3A%20%23fff%3B%0Amargin%3A%201em%20auto%3B%0Amax%2Dwidth%3A%20700px%3B%0Aoverflow%3A%20visible%3B%0Apadding%2Dleft%3A%202em%3B%0Apadding%2Dright%3A%202em%3B%0Afont%2Dfamily%3A%20%22Open%20Sans%22%2C%20%22Helvetica%20Neue%22%2C%20Helvetica%2C%20Arial%2C%20sans%2Dserif%3B%0Afont%2Dsize%3A%2014px%3B%0Aline%2Dheight%3A%201%2E35%3B%0A%7D%0A%23header%20%7B%0Atext%2Dalign%3A%20center%3B%0A%7D%0A%23TOC%20%7B%0Aclear%3A%20both%3B%0Amargin%3A%200%200%2010px%2010px%3B%0Apadding%3A%204px%3B%0Awidth%3A%20400px%3B%0Aborder%3A%201px%20solid%20%23CCCCCC%3B%0Aborder%2Dradius%3A%205px%3B%0Abackground%2Dcolor%3A%20%23f6f6f6%3B%0Afont%2Dsize%3A%2013px%3B%0Aline%2Dheight%3A%201%2E3%3B%0A%7D%0A%23TOC%20%2Etoctitle%20%7B%0Afont%2Dweight%3A%20bold%3B%0Afont%2Dsize%3A%2015px%3B%0Amargin%2Dleft%3A%205px%3B%0A%7D%0A%23TOC%20ul%20%7B%0Apadding%2Dleft%3A%2040px%3B%0Amargin%2Dleft%3A%20%2D1%2E5em%3B%0Amargin%2Dtop%3A%205px%3B%0Amargin%2Dbottom%3A%205px%3B%0A%7D%0A%23TOC%20ul%20ul%20%7B%0Amargin%2Dleft%3A%20%2D2em%3B%0A%7D%0A%23TOC%20li%20%7B%0Aline%2Dheight%3A%2016px%3B%0A%7D%0Atable%20%7B%0Amargin%3A%201em%20auto%3B%0Aborder%2Dwidth%3A%201px%3B%0Aborder%2Dcolor%3A%20%23DDDDDD%3B%0Aborder%2Dstyle%3A%20outset%3B%0Aborder%2Dcollapse%3A%20collapse%3B%0A%7D%0Atable%20th%20%7B%0Aborder%2Dwidth%3A%202px%3B%0Apadding%3A%205px%3B%0Aborder%2Dstyle%3A%20inset%3B%0A%7D%0Atable%20td%20%7B%0Aborder%2Dwidth%3A%201px%3B%0Aborder%2Dstyle%3A%20inset%3B%0Aline%2Dheight%3A%2018px%3B%0Apadding%3A%205px%205px%3B%0A%7D%0Atable%2C%20table%20th%2C%20table%20td%20%7B%0Aborder%2Dleft%2Dstyle%3A%20none%3B%0Aborder%2Dright%2Dstyle%3A%20none%3B%0A%7D%0Atable%20thead%2C%20table%20tr%2Eeven%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0Ap%20%7B%0Amargin%3A%200%2E5em%200%3B%0A%7D%0Ablockquote%20%7B%0Abackground%2Dcolor%3A%20%23f6f6f6%3B%0Apadding%3A%200%2E25em%200%2E75em%3B%0A%7D%0Ahr%20%7B%0Aborder%2Dstyle%3A%20solid%3B%0Aborder%3A%20none%3B%0Aborder%2Dtop%3A%201px%20solid%20%23777%3B%0Amargin%3A%2028px%200%3B%0A%7D%0Adl%20%7B%0Amargin%2Dleft%3A%200%3B%0A%7D%0Adl%20dd%20%7B%0Amargin%2Dbottom%3A%2013px%3B%0Amargin%2Dleft%3A%2013px%3B%0A%7D%0Adl%20dt%20%7B%0Afont%2Dweight%3A%20bold%3B%0A%7D%0Aul%20%7B%0Amargin%2Dtop%3A%200%3B%0A%7D%0Aul%20li%20%7B%0Alist%2Dstyle%3A%20circle%20outside%3B%0A%7D%0Aul%20ul%20%7B%0Amargin%2Dbottom%3A%200%3B%0A%7D%0Apre%2C%20code%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0Aborder%2Dradius%3A%203px%3B%0Acolor%3A%20%23333%3B%0Awhite%2Dspace%3A%20pre%2Dwrap%3B%20%0A%7D%0Apre%20%7B%0Aborder%2Dradius%3A%203px%3B%0Amargin%3A%205px%200px%2010px%200px%3B%0Apadding%3A%2010px%3B%0A%7D%0Apre%3Anot%28%5Bclass%5D%29%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0Acode%20%7B%0Afont%2Dfamily%3A%20Consolas%2C%20Monaco%2C%20%27Courier%20New%27%2C%20monospace%3B%0Afont%2Dsize%3A%2085%25%3B%0A%7D%0Ap%20%3E%20code%2C%20li%20%3E%20code%20%7B%0Apadding%3A%202px%200px%3B%0A%7D%0Adiv%2Efigure%20%7B%0Atext%2Dalign%3A%20center%3B%0A%7D%0Aimg%20%7B%0Abackground%2Dcolor%3A%20%23FFFFFF%3B%0Apadding%3A%202px%3B%0Aborder%3A%201px%20solid%20%23DDDDDD%3B%0Aborder%2Dradius%3A%203px%3B%0Aborder%3A%201px%20solid%20%23CCCCCC%3B%0Amargin%3A%200%205px%3B%0A%7D%0Ah1%20%7B%0Amargin%2Dtop%3A%200%3B%0Afont%2Dsize%3A%2035px%3B%0Aline%2Dheight%3A%2040px%3B%0A%7D%0Ah2%20%7B%0Aborder%2Dbottom%3A%204px%20solid%20%23f7f7f7%3B%0Apadding%2Dtop%3A%2010px%3B%0Apadding%2Dbottom%3A%202px%3B%0Afont%2Dsize%3A%20145%25%3B%0A%7D%0Ah3%20%7B%0Aborder%2Dbottom%3A%202px%20solid%20%23f7f7f7%3B%0Apadding%2Dtop%3A%2010px%3B%0Afont%2Dsize%3A%20120%25%3B%0A%7D%0Ah4%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23f7f7f7%3B%0Amargin%2Dleft%3A%208px%3B%0Afont%2Dsize%3A%20105%25%3B%0A%7D%0Ah5%2C%20h6%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23ccc%3B%0Afont%2Dsize%3A%20105%25%3B%0A%7D%0Aa%20%7B%0Acolor%3A%20%230033dd%3B%0Atext%2Ddecoration%3A%20none%3B%0A%7D%0Aa%3Ahover%20%7B%0Acolor%3A%20%236666ff%3B%20%7D%0Aa%3Avisited%20%7B%0Acolor%3A%20%23800080%3B%20%7D%0Aa%3Avisited%3Ahover%20%7B%0Acolor%3A%20%23BB00BB%3B%20%7D%0Aa%5Bhref%5E%3D%22http%3A%22%5D%20%7B%0Atext%2Ddecoration%3A%20underline%3B%20%7D%0Aa%5Bhref%5E%3D%22https%3A%22%5D%20%7B%0Atext%2Ddecoration%3A%20underline%3B%20%7D%0A%0Acode%20%3E%20span%2Ekw%20%7B%20color%3A%20%23555%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Edt%20%7B%20color%3A%20%23902000%3B%20%7D%20%0Acode%20%3E%20span%2Edv%20%7B%20color%3A%20%2340a070%3B%20%7D%20%0Acode%20%3E%20span%2Ebn%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Efl%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Ech%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Est%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Eco%20%7B%20color%3A%20%23888888%3B%20font%2Dstyle%3A%20italic%3B%20%7D%20%0Acode%20%3E%20span%2Eot%20%7B%20color%3A%20%23007020%3B%20%7D%20%0Acode%20%3E%20span%2Eal%20%7B%20color%3A%20%23ff0000%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Efu%20%7B%20color%3A%20%23900%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%20code%20%3E%20span%2Eer%20%7B%20color%3A%20%23a61717%3B%20background%2Dcolor%3A%20%23e3d2d2%3B%20%7D%20%0A" rel="stylesheet" type="text/css" />
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">FastMix User Guide</h1>
+<h4 class="author"><em>Hao Sun, Xing Qiu</em></h4>
+<h4 class="date"><em>2018-09-24</em></h4>
+
+
+
+<p>In this Vignette, we describe the basic usage of the <code>FastMix</code> package. This package implements a fast parameter estimation and hypothesis testing framework for a special type of linear mixed effects model inspired by the deconvolution project. Below we describe the inspiring problem, the mathematical model, and the usage of the main R function, <code>FastMix()</code>.</p>
+<div id="introduction" class="section level2">
+<h2>Introduction</h2>
+<p>We will briefly describe a motivating problem for which the <code>FastMix</code> package is applicable.</p>
+<p>In most genomic studies, gene expressions are quantified from a mixture of heterogeneous cells. In certain cases, we may have matching phenotype data (often from flow-cytometry) which quantify the proportion of <span class="math inline">\(k=1, 2, \dots, K\)</span> types of cells in the sample. One popular task is to use the observed cell proportions to “deconvolute” the mixed gene expressions, namely, to obtain cell-specific gene expressions for each subject (henceforth denoted as <span class="math inline">\(b_{kij}\)</span>, for the <span class="math inline">\(k\)</span>th cell, <span class="math inline">\(i\)</span>th gene, <span class="math inline">\(j\)</span>th subject).</p>
+<p>In a sense, the need for producing <em>subject-specific</em> expressions is primarily driven by the downstream statistical analysis, in which <span class="math inline">\(b_{kij}\)</span> are considered as new observations to be associated with subject-specific clinical covariates, such as the disease severity, age, and sex.</p>
+<p>From the statistical perspective, the main difficulty of the above approach is that the deconvolution step is a typical “large <span class="math inline">\(p\)</span>, small <span class="math inline">\(n\)</span>” problem. For each gene, we have <span class="math inline">\(n\)</span> observations of the mixed gene expression; yet our goal is to produce <span class="math inline">\(Kn\)</span> estimates for each subject (<span class="math inline">\(i=1, 2, \dots, n\)</span>) and each type of cell (<span class="math inline">\(k=1, 2, \dots, K\)</span>). While it is theoretically doable based on certain penalized regression, the resulting cell-specific expressions will inevitably have high level of variance.</p>
+<p>In this study, we take a different approach, namely, to combine the deconvolution step with the downstream analysis into a <strong>single</strong> mixed effects model. The advantages of doing so are:</p>
+<ol style="list-style-type: decimal">
+<li>Cell-specific gene expressions are modeled as a mixture of fixed and random effects, so each subject (and each cell, each gene) can have a different estimate <span class="math inline">\(\hat{b}_{kij}\)</span> via EBLUP (empirical best linear unbiased predictor).</li>
+<li>The degrees of freedom (unknown parameters) of the above model is small. Specifically, subject-specific variation of <span class="math inline">\(\hat{b}_{kij}\)</span> is controlled by clinical covariates via a linear model.</li>
+<li>The primary inference is based on the interaction between the cell proportions and clinical covariates, which pools all subjects, so there is no “small <span class="math inline">\(n\)</span>, large <span class="math inline">\(p\)</span>” problem. The results will be a set of <span class="math inline">\(p\)</span>-values for each cell type and each clinical covariate.</li>
+<li>We also developed a novel gene prioritizing procedure based on the theory of outliers. More specifically, among all the predicted random effect terms (cell, covariate, and gene) for a fixed cell and covariate, we will be able to identify those genes that are significantly different from the majority of genes. The result will be a 3D tensor of <span class="math inline">\(p\)</span>-values for cell, covariate, and gene, as well as the the direction and magnitude of this random interaction term being greater than the average.</li>
+</ol>
+<p>In summary, we have designed a <strong>one-step</strong> inferential framework based on mixed effects regression and outlier analysis for the deconvolution analysis that greatly reduces the model complexity, yet still flexible enough to produce estimates of the association between the cell-specific gene expressions and clinical covariates, as well as their corresponding <span class="math inline">\(p\)</span>-values for each gene, cell, and covariate.</p>
+</div>
+<div id="mathematical-model" class="section level2">
+<h2>Mathematical model</h2>
+<p>Based on a simple additive model, <span class="math inline">\(Y_{ji}\)</span>, the expression level of the <span class="math inline">\(i\)</span>th gene, <span class="math inline">\(i=1, 2, \dots, m\)</span> for the <span class="math inline">\(j\)</span>th subject, <span class="math inline">\(j=1, 2, \dots, n\)</span>, can be described as</p>
+<p><span class="math display">\[Y_{ji} = \sum_{k=1}^{K} C_{jk} b_{kij} + \sum_{p=1}^{P} Z_{jp} d_{pi} + \epsilon_{ji}. \]</span></p>
+<p>Here <span class="math inline">\(C_{jk}\)</span> is the proportion of the <span class="math inline">\(k\)</span>th cell for the <span class="math inline">\(j\)</span>th subject (measured by e.g., flow-cytometry); <span class="math inline">\(b_{kij}\)</span> is the expression of the <span class="math inline">\(i\)</span>th gene produced by one unit of <span class="math inline">\(k\)</span>th cell for the <span class="math inline">\(j\)</span>th subject; <span class="math inline">\(Z_{jp}\)</span> is the value of the <span class="math inline">\(p\)</span>th <strong>standardized</strong> clinical variable (such as age, sex, and severity; standardized so that all of them have mean zero and unit standard deviation therefore directly comparable) of the <span class="math inline">\(j\)</span>th subject; <span class="math inline">\(d_{pi}\)</span> is the association of the <span class="math inline">\(p\)</span>th clinical covariate to the <span class="math inline">\(i\)</span>th gene; and <span class="math inline">\(\epsilon_{ji}\)</span> is the error term. We further assume that the cell-specific expression, <span class="math inline">\(b_{kij}\)</span>, and covariate-specific association, <span class="math inline">\(d_{pi}\)</span>, have the following mixed effects structure</p>
+<p><span class="math display">\[ b_{kij} = b_{k} + u_{ki} + \sum_{p=1}^{P} Z_{jp} (a_{pk} + \alpha_{pki}), \qquad d_{pi} = \delta_{p} + e_{pi}. \]</span></p>
+<p>Here <span class="math inline">\(b_{k}\)</span> is the mean contribution to expression from the <span class="math inline">\(k\)</span>th cell to all genes; <span class="math inline">\(u_{ki}\)</span> is a random effect term specific to the <span class="math inline">\(i\)</span>th gene; <span class="math inline">\(a_{pk}\)</span> represents the mean (over all subjects and genes) association between <span class="math inline">\(Z_{jp}\)</span> and <span class="math inline">\(b_{kij}\)</span>; and <span class="math inline">\(\alpha_{pki}\)</span> is a random effect term that describes the association of <span class="math inline">\(Z_{jp}\)</span> and a specific gene; <span class="math inline">\(\delta_{p}\)</span> is the overall association of <span class="math inline">\(p\)</span> to all genes and <span class="math inline">\(e_{pi}\)</span> is a random effect that describes the association between the <span class="math inline">\(p\)</span>th covariate and the <span class="math inline">\(i\)</span>th gene.</p>
+<p>We may merge the first two equations and obtain the following <strong>combined model</strong></p>
+<p><span class="math display">\[ Y_{ji} = X_{jl} \left( \beta_{l} + \gamma_{li} \right) + \epsilon_{ji}. \]</span></p>
+<p>Here <span class="math inline">\(X_{\cdot, \cdot}\)</span> is the combined covariate matrix and it includes <span class="math inline">\(C_{jk}\)</span>, <span class="math inline">\(Z_{jp}\)</span>, and <span class="math inline">\(C_{jk} Z_{jp}\)</span>. For example, if we have three types of cells and two clinical covariates, the total number of covariates would be <span class="math inline">\(L = 3 + 2 + 3\times 2 = 11\)</span>. <span class="math inline">\(\beta_{l}\)</span> is the contribution of <span class="math inline">\(X_{\cdot,l}\)</span> (could be <span class="math inline">\(C\)</span>, <span class="math inline">\(Z\)</span>, or their interaction) to the entire transcriptome, and <span class="math inline">\(\gamma_{li}\)</span> is the random effect term that characterizes the effect of <span class="math inline">\(X_{\cdot,l}\)</span> to a specific gene.</p>
+</div>
+<div id="computational-challenge-and-the-fast-lmer-algorithm" class="section level2">
+<h2>Computational challenge and the Fast LMER algorithm</h2>
+<p>The above model is a standard LMER so it can be fitted by a stock mixed effects regression software, such as R package <code>lme4</code>, the reference implementation of LMER in R. However, due to the high-throughput nature of the data, fitting such a large regression model is computationally very demanding. Furthermore, there are occasional convergence issues due to the use of the EM algorithm in <code>lme4</code>.</p>
+<p>Instead, we developed an efficient estimation framework based on an initial OLS regression, moment method, and the EBLUP.</p>
+</div>
+<div id="the-outlier-detection-algorithm-for-the-predicted-random-effects" class="section level2">
+<h2>The outlier detection algorithm for the predicted random effects</h2>
+<p>In addition, we also developed a hypothesis testing method to check that, for a given <span class="math inline">\(l\)</span>, whether the estimated random effect for a specific gene (<span class="math inline">\(\gamma_{li}\)</span>) is significantly different from its “main distribution”. Specifically, we consider that the previous <strong>combined model</strong> only describes the distribution of the majority of genes; and there may be small subsets of genes that have different distribution of linear coefficients. In other words, if gene <span class="math inline">\(i\)</span> is in this subset, its linear coefficient associated some <span class="math inline">\(X_{\cdot l}\)</span> does <strong>not</strong> follow <span class="math inline">\(N(\beta_{l}, \sigma_{\gamma_{l}}^2)\)</span>, and could be detected as an <strong>outlier</strong> from the major distribution.</p>
+<p>Technical details are summarized in another document, <code>FAST_LMER_project.pdf</code></p>
+</div>
+<div id="usage-examples" class="section level2">
+<h2>Usage examples</h2>
+<p>The primary function in our package is <code>ols.eblup.trim()</code> (<strong>[09/21/2018 Remark]</strong> to be renamed to <code>FastMix()</code> in the next version). It takes the following arguments: <code>Des</code>, <code>Y</code>, <code>random</code>, <code>independent</code>, <code>trim</code>, and <code>type</code>. Here <code>Des</code> is the design matrix ordered by Gene times</p>
+</div>
+<div id="simulation" class="section level2">
+<h2>Simulation</h2>
+<p>To be written by Hao Sun later. The following is a simulated example created by Xing on 09/24/2018.</p>
+<p>In this simulated study, there are <span class="math inline">\(m=5000\)</span> genes and <span class="math inline">\(n=50\)</span> subjects. There are three cell types and the data are stored in object <code>CellProp</code>. I created a clinical dataset called <code>Demo</code>, which consists of two variables, <code>Severity</code> and <code>Sex</code>. Based on the previous discussion, the observed bulk gene expression may be associated with a total of <span class="math inline">\(L=11\)</span> covariates: 3 cell proportions, 2 clinical variables, and 6 of the interaction terms.</p>
+<p>I created true associations between the covariates and gene expressions in this way.</p>
+<ol style="list-style-type: decimal">
+<li>Cell1 has overall association with all gene expressions; Cell 2 and 3 does not. Using previous notation, <span class="math inline">\(b_1 = 1.5\)</span>, <span class="math inline">\(b_2 = 0\)</span>, <span class="math inline">\(b_3 = 0\)</span>.<br />
+</li>
+<li>The majority of the genes are associated with these cells with variance <span class="math inline">\(N(0, \sigma_{u}^{2})\)</span>, <span class="math inline">\(\sigma_{u}^{2} = 0.6\)</span>.</li>
+<li>Neither Severity nor Sex has overall association with the entire transcriptome. The majority of their coefficients follow <span class="math inline">\(N(0, \sigma_{e}^{2})\)</span>, <span class="math inline">\(\sigma_{e}^{2} = 0.4\)</span>.</li>
+<li>The interaction between Cell1 and Severity has an overall impact on the transcriptome; the corresponding coefficients follows <span class="math inline">\(N(\beta_6, \sigma_{alpha}^2)\)</span>, <span class="math inline">\(\beta_6 = 0.75\)</span>, <span class="math inline">\(\sigma_{alpha}^2 = 0.8\)</span>.</li>
+<li>The first 100 genes have strong association with Cell1, such that <span class="math inline">\(b_{1i} = b_{1} \pm 3\)</span>, with equal probability of positive or negative shift. In other words, their linear coefficients are outliers w.r.t. the major distribution.</li>
+<li>The linear coefficients between Genes 101 - 200 and Cell2 are outliers created in the same way (<span class="math inline">\(\pm 3\)</span> units).</li>
+<li>In the same way,</li>
+</ol>
+<p>The first 100 genes are significantly associated with the first covariate (Cell1), the second 100 genes are significantly associated with the second covariate, so on so forth.</p>
+</div>
+<div id="real-data-example" class="section level2">
+<h2>Real data example</h2>
+<p>To be written later based on the UR/JCVI collaboration on the RPRC data.</p>
+</div>
+
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

@@ -25,7 +25,8 @@ the rest columns are covariates. See the data example for more details.
   if the random effects are corrected or not. T or F
   }
   \item{trim}{
-  the trimming percentage when accounting for outliers. Default valie is 0.2 (20/%).
+    the trimming percentage when accounting for outliers.
+    Default valie is 0.2 (20\%).
   }
   \item{type}{
   the method to calculate the p-values. F or chi.
@@ -71,5 +72,7 @@ Y <- dataexample$Y
 ## fit the model
 mod <- ols.eblup.trim(Des, Y, random = c(1,2,3,4), independent = T, trim = 0.2, type = "chi")
 
-%\keyword{ ~linear mixed model }% use one of  RShowDoc("KEYWORDS")
+}                               % end examples.
+
+\keyword{models}% use one of  RShowDoc("KEYWORDS")
 %\keyword{ ~outliers }% __ONLY ONE__ keyword per line
