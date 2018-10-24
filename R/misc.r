@@ -1,13 +1,109 @@
 ## misc useful functions
+data_gen <- function(m, n, seed = 1, outlier = T, cor = 0){
+  ## generate some new simulated data
+  n <- n
+  set.seed(seed)
+  CellProp <- cbind(Cell1=runif(n, .2, .3),
+                    Cell2=runif(n, .2, .3),
+                    Cell3=runif(n, .2, .3))
+  rownames(CellProp) <- paste0("Subj", 1:n)
+  Demo <- cbind(Severity=round(runif(n, 0, 10), 1),
+                Sex=c(rep(0, n/2), rep(1, n/2)))
+  rownames(Demo) <- paste0("Subj", 1:n)
 
-.cov.est <- function(bmat, var.epsilon, xx){
-  m <- nrow(bmat)
-  vc <- cov(bmat) - 1/m * var.epsilon * xx
+  ## generate some true signals
+
+  m <- m                               #genes
+  bb <- c(1.5, 0, 0)                     #assoc. w. CellProp
+  sigma2.u <- 1
+  sigma2.e <- 0.6
+  sigma2.alpha <- 1.5
+  sigma2.err <- 1/16
+  #sigma2.err <- 0.5 #i.i.d. noise
+  ## mean interactions
+  aa <- rep(0, 6); aa[1] <- .75
+
+  Bmat <- t(replicate(m, c(bb, 0, 0, aa))); L <- ncol(Bmat)
+  sdvec <- (c(rep(sigma2.u, 3), rep(sigma2.e,2), rep(sigma2.alpha, 6)))
+
+  if(outlier == T){
+    ### the location shift
+    idx = c(1,4,7,10)
+    str = sdvec[idx] * 3
+    OutSig = matrix(NA, ncol = 4, nrow = m)
+    for(i in 1:4){
+      OutSig[,i] <- c(rep(0, m * 0.05 * (i-1)), rep(str[i], m * 0.05), rep(0, m*(1 - i * 0.05)))
+    }
+    OutSig <- OutSig * (2*rbinom(length(OutSig), 1, .5) - 1) # approximately 0 mean
+    Bmat[,idx] = Bmat[,idx] + OutSig
+    if(cor == 0){
+      Gmat <- matrix(rnorm(L*m),m,L) %*% diag(sdvec)
+      sigmamat = diag(sdvec^2)
+      # for(i in 1:4){
+      #   Gmat[(m * 0.05 * (i-1)+1):(m * 0.05 * i), idx[i]] <- Gmat[(m * 0.05 * (i-1)+1):(m * 0.05 * i), idx[i]]
+      # }
+    }
+    else{
+      cormat <- matrix(cor, ncol = 11, nrow = 11)
+      diag(cormat) = 1
+      sigmamat <- sweep(sweep(cormat, 1, sdvec, "*"), 2, sdvec, "*")
+      a = chol(sigmamat)
+      Gmat <- matrix(rnorm(L*m),m,L) %*% a
+      for(i in 1:4){
+        Gmat[(m * 0.05 * (i-1)+1):(m * 0.05 * i), idx[i]] <- Gmat[(m * 0.05 * (i-1)+1):(m * 0.05 * i), idx[i]]/2
+      }
+    }
+  }
+  else{
+    Bmat = Bmat
+    if(cor == 0){
+      Gmat <- matrix(rnorm(L*m),m,L) %*% diag(sdvec)
+      sigmamat = diag(sdvec^2)
+      # for(i in 1:4){
+      #   Gmat[(m * 0.05 * (i-1)+1):(m * 0.05 * i), idx[i]] <- Gmat[(m * 0.05 * (i-1)+1):(m * 0.05 * i), idx[i]]
+      # }
+    }
+    else{
+      cormat <- matrix(cor, ncol = 11, nrow = 11)
+      diag(cormat) = 1
+      sigmamat <- sweep(sweep(cormat, 1, sdvec, "*"), 2, sdvec, "*")
+      a = chol(sigmamat)
+      Gmat <- matrix(rnorm(L*m),m,L) %*% a
+      for(i in 1:4){
+        Gmat[(m * 0.05 * (i-1)+1):(m * 0.05 * i), idx[i]] <- Gmat[(m * 0.05 * (i-1)+1):(m * 0.05 * i), idx[i]]/2
+      }
+    }
+  }
+
+  ## generate the gene expression
+  Err <- matrix(rnorm(m*n, sd=sqrt(sigma2.err)), nrow=m, ncol=n)
+  colnames(Err) <- paste0("Subj", 1:n); rownames(Err) <- paste0("Gene", 1:m)
+
+  ## Use DataPrep to get Xmat; Y is irrelevant
+  Xmat <- t(DataPrep(Err, CellProp, Demo)$X[1:n, -1])
+
+  ## the gene expression matrix
+  GeneExp <- (Bmat + Gmat) %*% Xmat + Err
+
+  return(list(GeneExp = GeneExp, CellProp = CellProp, Demo = Demo, Bmat = Bmat, Gmat = Gmat, sigmamat = sigmamat))
+}
+
+.cov.est <- function(bmat, var.epsilon, xx, m, coef){
+  #m <- nrow(bmat)
+  #vc <- diag(sqrt(coef)) %*% cov(bmat) %*% diag(sqrt(coef)) - 1/m * var.epsilon * xx
+  vc <- cov(bmat)
+  diag(vc) = diag(vc) * coef
+  vc <- vc - 1/m * var.epsilon * xx
   ## We may force it to be positive semi-definite. Right now just return vc
   return(vc)
 }
 
-
+robust.cov.est <- function(bmat, var.epsilon, xx, m, robust){
+  #m <- nrow(bmat)
+  vc <- covRob(bmat, estim = robust)$cov - 1/m * var.epsilon * xx
+  ## We may force it to be positive semi-definite. Right now just return vc
+  return(vc)
+}
 
 ## A convenience function to generate the combined covariate matrix
 DataPrep <- function(GeneExp, CellProp, Demo){
@@ -41,13 +137,10 @@ DataPrep <- function(GeneExp, CellProp, Demo){
 }
 
 
-## A wrapper function to compute EBLUP
-
-
 #----------------------------------------------------------------------------#
 # the function to calculate the chi-square type value. Similar as ols.eblup  #
 #----------------------------------------------------------------------------#
-hy.ols.blup.wrapper <- function(Des, Y, var.epsilon, number, random = c(1,2,3,4), vc, independent = F, trim.idx = NULL) {
+hy.ols.blup.wrapper <- function(Des, Y, var.epsilon, number, random = random, vc, independent = F, trim.idx = NULL) {
   if(independent == F){
     a <- eigen(vc)
     a$values <- pmax(a$values, var.epsilon/100)
@@ -107,7 +200,7 @@ hy.ols.blup.wrapper <- function(Des, Y, var.epsilon, number, random = c(1,2,3,4)
                                                              ZY[[i]] + lambda.hat * ZZ[[i]] %*% cap[[i]] %*% t(XZ[[i]]) %*% betahat))
   blup <- t(do.call(cbind, gamma.hat))
   ## assign colnames to blup
-  colnames(blup) <- colnames(Des)[-1]
+  colnames(blup) <- colnames(Des)[-1][random]
 
   ################################################################################################
   ################## DEFINE SOME USEFUL QUANTITIES TO COMPUTE THE VARIANCE OF EBLUP ##############
@@ -122,18 +215,30 @@ hy.ols.blup.wrapper <- function(Des, Y, var.epsilon, number, random = c(1,2,3,4)
   var.part1 <- lapply(1:m, function(i) A %*%  ZZ[[i]] %*% yvar[[i]] %*% A)
   var.part2 <- lapply(1:m, function(i) A %*% yvar[[i]] %*% t(XZ[[i]]) %*% sigmabeta %*%
                                          XZ[[i]] %*% yvar[[i]] %*% A)
+  var2.part1 <- lapply(1:m, function(i) ZZ[[i]] %*% yvar[[i]])
+  var2.part2 <- lapply(1:m, function(i) yvar[[i]] %*% t(XZ[[i]]) %*% sigmabeta %*%
+                        XZ[[i]] %*% yvar[[i]])
+  var2.eblup <- lapply(1:m, function(i) var2.part1[[i]] - var2.part2[[i]])
   #var.part3 = -2*var.part2
   var.eblup <- lapply(1:m, function(i) var.part1[[i]] - var.part2[[i]])
 
   ######################## refit the B matrix  ####################################################
   ######################## the eblup values #######################################################
   eta.stat <- unlist(lapply(1:m, function(i) {t(blup[i,]) %*% solve(var.eblup[[i]]) %*% blup[i,]}))
+
+  # ### recover the covariance matrix
+  # eta.stat3 <- lapply(1:m, function(i) {a = eigen(solve(var2.eblup[[i]])); solve(A) %*% a$vectors %*% diag(sqrt(a$values)) %*% t(a$vectors) %*% blup[i,]})
+  # eta.stat3 <- t(do.call("cbind",eta.stat3))
+  #
+  eta.stat2 <- lapply(1:m, function(i) {a = eigen(solve(var.eblup[[i]])); a$vectors %*% diag(sqrt(a$values)) %*% t(a$vectors) %*% blup[i,]})
+  eta.stat2 <- t(do.call("cbind",eta.stat2))
+
   eta.test <- lapply(1:m, function(i) {blup[i,]/sqrt(diag(var.eblup[[i]]))})
   eta.test <- t(do.call("cbind",eta.test))
   ## the covariance estimation
   cov = vc.hat*var.epsilon * lambda.hat
-  rownames(cov) <- colnames(cov) <- colnames(Des)[-1]
-  return(list(eta.stat = eta.stat, eta.test = eta.test,
+  rownames(cov) <- colnames(cov) <- colnames(Des)[-1][random]
+  return(list(eta.stat = eta.stat, eta.stat2 = eta.stat2, eta.test = eta.test,
               blup = blup, betahat = betahat, sigmabeta = sigmabeta,
               cov = cov, lambda.hat = lambda.hat))
 }

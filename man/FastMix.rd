@@ -1,23 +1,25 @@
-\name{ols.eblup.trim}
-\alias{ols.eblup.trim}
+\name{FastMix}
+\alias{FastMix}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-  The main function to conduct FastMix pipeline.
+   A wrapper for FastMix pipeline.
 
 }
 \description{
- A new analytic pipeline, dubbed as FastMix, that combines the deconvolution step with the downstream analyses based on linear
-mixed eﬀects regression (LMER) model
+A wrapper for the main function `ols.eblup.trim()` to conduct deconvolution gene expression analysis with matching cell proportions.
 }
 \usage{
-ols.eblup.trim (Des, Y, random = "all", independent = T, trim = 0.5, robust = FALSE)
+FastMix(GeneExp, CellProp, Demo, random="all", robust = FASLE, ...)
 }
 \arguments{
-  \item{Des}{
-  the design matrix ordered by gene subject by subject. First column should be identification variable, e.g., ID or subject, and the rest columns are covariates.
+  \item{GeneExp}{
+  `GeneExp` is a m by n dimensional gene expression matrix, where m is the number of genes, and n is the number of subjects.
 }
-  \item{Y}{
-  vectorized gene expression data.
+  \item{CellProp}{
+  `CellProp` is a n by K dimensional matrix of cell proportions, where K is the number of cell proportions.
+  }
+  \item{Demo}{
+  `Clinical` is a n by p dimensional matrix of clinical and demographic variables to be tested, where p is the number of covariates.
   }
   \item{random}{
   `random` is an index vector that specifies which variable(s) requires random effects -- by default, all covariates are paired with a random effect.
@@ -41,14 +43,14 @@ ols.eblup.trim (Des, Y, random = "all", independent = T, trim = 0.5, robust = FA
 %%  If it is a LIST, use
 \item{beta.hat }{the fix effect estimation.}
 \item{beta.mat }{individual coefficient estimation.}
-\item{Yhat}{fitted response.}
+\item{GeneExp.fitted }{fitted gene expression.}
 \item{sigma.beta}{the covariance estimation of fixed effect.}
 \item{VC }{variance component estimation. The first column is the one for common random error. The second column is the one for random effects.}
 \item{t.fixed }{the t value for fixed effects. }
 \item{eta}{the chi sqiare type statsitics used for p-value calculation.}
 \item{p.unadjust}{the overall p-value for outlier detection.}
 \item{p.ind.unadjust}{the individual p-value for outlier detection for each random effect.}
-\item{out_idx}{he potential covariates with outliers when robust = "FastMix. It is NULL when robust != "FastMix"}
+\item{out_idx}{the potential covariates with outliers when robust = "FastMix. It is NULL when robust != "FastMix"}
 %% ...
 }
 \references{
@@ -67,15 +69,9 @@ Hao Sun
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
-## load the data example and transform the data
-gnames <- rownames(GeneExp); m <- nrow(GeneExp)
-if (is.null(gnames)) {
-  rownames(GeneExp) <- gnames <- paste0("Gene", 1:m)
-}
-Data2 <- DataPrep(GeneExp, CellProp, Demo)
-
+## load the data example
 ## fit the model
-mod <- ols.eblup.trim(Des=Data2$X, Y=Data2$Y, random="all", robust = "FastMix")
+mod <- FastMix(GeneExp, CellProp, Demo, random="all", robust = FASLE)
 
 }                               % end examples.
 

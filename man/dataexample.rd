@@ -5,14 +5,14 @@
 dataexample
 }
 \description{
-An simulated data exmaple to show the data structure needed in our functions.
+A simulated data exmaple to show the data structure needed for the deconvolution application.
 }
 \usage{"dataexample.rd"}
 \format{
-  A list with two objects
   \describe{
-    \item{\code{Des}}{The design matrix}
-    \item{\code{Y}}{The response}
+    \item{\code{CellProp}}{ `CellProp` is a n by K dimensional matrix of cell proportions, where K is the number of cell proportions.
+    \item{\code{GeneExp}}{ `GeneExp` is a m by n dimensional gene expression matrix, where m is the number of genes, and n is the number of subjects.}
+    \item{\code{Demo}}{ `Clinical` is a n by p dimensional matrix of clinical and demographic variables to be tested, where p is the number of covariates.}
   }
 }
 \details{
@@ -25,7 +25,5 @@ An simulated data exmaple to show the data structure needed in our functions.
 %%  ~~ possibly secondary sources and usages ~~
 }
 \examples{
-Des <- dataexample$Des
-Y <- dataexample$Y
 }
 \keyword{datasets}
