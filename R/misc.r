@@ -1,5 +1,5 @@
 ## misc useful functions
-data_gen <- function(m, n, seed = 1, outlier = T, cor = 0){
+data_gen <- function(m, n, seed = 1, outlier = T, cor = 0, balance = T){
   ## generate some new simulated data
   n <- n
   set.seed(seed)
@@ -17,7 +17,7 @@ data_gen <- function(m, n, seed = 1, outlier = T, cor = 0){
   bb <- c(1.5, 0, 0)                     #assoc. w. CellProp
   sigma2.u <- 1
   sigma2.e <- 0.6
-  sigma2.alpha <- 1.5
+  sigma2.alpha <- 1.2
   sigma2.err <- 1/16
   #sigma2.err <- 0.5 #i.i.d. noise
   ## mean interactions
@@ -29,12 +29,14 @@ data_gen <- function(m, n, seed = 1, outlier = T, cor = 0){
   if(outlier == T){
     ### the location shift
     idx = c(1,4,7,10)
-    str = sdvec[idx] * 3
+    str = sdvec[idx] * 3.5
     OutSig = matrix(NA, ncol = 4, nrow = m)
     for(i in 1:4){
       OutSig[,i] <- c(rep(0, m * 0.05 * (i-1)), rep(str[i], m * 0.05), rep(0, m*(1 - i * 0.05)))
     }
-    OutSig <- OutSig * (2*rbinom(length(OutSig), 1, .5) - 1) # approximately 0 mean
+    if(balance == T) OutSig <- OutSig * (2*rbinom(length(OutSig), 1, .5) - 1) # approximately 0 mean
+    else if (balance == F) OutSig <- OutSig * (2*rbinom(length(OutSig), 1, 0.9) - 1) # approximately 0 mean
+    
     Bmat[,idx] = Bmat[,idx] + OutSig
     if(cor == 0){
       Gmat <- matrix(rnorm(L*m),m,L) %*% diag(sdvec)
@@ -181,16 +183,16 @@ hy.ols.blup.wrapper <- function(Des, Y, var.epsilon, number, random = random, vc
     betahat <- 1/var.epsilon * sigmabeta %*% Reduce("+", betai)
   }
   else{
-    sigmabeta_i <-  lapply((1:m)[-trim.idx], function(i) {XX[[i]] - lambda.hat * XZ[[i]] %*% cap[[i]] %*% t(XZ[[i]])})
+    sigmabeta_i <-  lapply((1:m)[trim.idx], function(i) {XX[[i]] - lambda.hat * XZ[[i]] %*% cap[[i]] %*% t(XZ[[i]])})
     sigmabeta <- var.epsilon * solve(Reduce("+", sigmabeta_i))
 
     ZY <- lapply(1:m, function(i) t(DZ.prime[(number[i]+1):(number[i+1]),]) %*% Y[(number[i]+1):(number[i+1])])
     XY <-  lapply(1:m, function(i) t(Des[(number[i]+1):(number[i+1]), -1]) %*% Y[(number[i]+1):(number[i+1])])
 
     #######################################################################################
-    ##### modify the trim,idx case at 6/14/2018: estimate fixed effect with trimed sunjects
+    ##### modify the trim,idx case at 6/14/2018: estimate fixed effect with trimed subjects
     #######################################################################################
-    betai <- lapply((1:m)[-trim.idx], function(i) XY[[i]] - lambda.hat * XZ[[i]] %*% cap[[i]] %*% ZY[[i]])
+    betai <- lapply((1:m)[trim.idx], function(i) XY[[i]] - lambda.hat * XZ[[i]] %*% cap[[i]] %*% ZY[[i]])
     betahat <- 1/var.epsilon * sigmabeta %*% Reduce("+", betai)
   }
   #betahat.back <- A %*% betahat

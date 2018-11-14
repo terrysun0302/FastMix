@@ -10,7 +10,7 @@
 mixed eﬀects regression (LMER) model
 }
 \usage{
-ols.eblup.trim (Des, Y, random = "all", independent = T, trim = 0.5, robust = FALSE)
+ols.eblup.trim (Des, Y, random = "all", independent = T, trim = 0.5, robust = FALSE, trim.fix = FALSE)
 }
 \arguments{
   \item{Des}{
@@ -31,6 +31,9 @@ ols.eblup.trim (Des, Y, random = "all", independent = T, trim = 0.5, robust = FA
   }
   \item{robust}{
   Specifies whether robust covariance estimation is implemented and which method to use:  "FALSE" for non-robust estimation; "mcd" for the MCD algorithm of    Rousseeuw and Van Driessen; "weighted" for the Reweighted MCD; "donostah" for the Donoho-Stahel projection based estimator; "pairwiseQC" for the     orthogonalized quadrant correlation pairwise estimator. All these algorithms come from the R package `robust`. "FastMix" is the proposed trimming method.
+  }
+   \item{trim.fix}{
+  Whether only consider trimmed subjects in fix effect estiamtion. The default value is FALSE.
   }
 }
 \details{

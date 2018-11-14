@@ -34,6 +34,9 @@ FastMix(GeneExp, CellProp, Demo, random="all", robust = FASLE, ...)
   \item{robust}{
   Specifies whether robust covariance estimation is implemented and which method to use:  "FALSE" for non-robust estimation; "mcd" for the MCD algorithm of    Rousseeuw and Van Driessen; "weighted" for the Reweighted MCD; "donostah" for the Donoho-Stahel projection based estimator; "pairwiseQC" for the     orthogonalized quadrant correlation pairwise estimator. All these algorithms come from the R package `robust`. "FastMix" is the proposed trimming method.
   }
+   \item{trim.fix}{
+  Whether only consider trimmed subjects in fix effect estiamtion. The default value is FALSE.
+  }
 }
 \details{
 %%  ~~ If necessary, more details than the description above ~~

@@ -29,6 +29,8 @@
 #                 from the R package "robust".                                 #
 #                 "FastMix" is the proposed trimming method.                   #
 #                                                                              #
+#  trim.fix       If only consider trimmed subjects in fix effect estiamtion.  #
+#                                                                              #
 #  Outputs                                                                     #
 #                                                                              #
 #  Returns a list                                                              #
@@ -62,7 +64,7 @@
 ################################ the function of proposed method #######################################
 ########################################################################################################
 
-ols.eblup.trim <- function(Des, Y, random = "all", independent = T, trim = 0.5, robust = FALSE){
+ols.eblup.trim <- function(Des, Y, random = "all", independent = T, trim = 0.5, robust = FALSE, trim.fix = FALSE){
   N <- length(Y) # number of total observations
   p <- dim(Des)[2]-1 #ID is not a covariate but a label
   if(length(random) == 1 && random == "all"){
@@ -152,7 +154,15 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = T, trim = 0.5, 
       warning("Fitting problems caused by trimming. Please try a smaller trim coefficient.")
     }
   }
-  refit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc.refit, independent = independent, trim.idx = NULL)
+
+  ### the option for fix effect
+  if(trim.fix == FALSE){
+    refit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc.refit, independent = independent)
+  }
+
+  else if(trim.fix == TRUE){
+    refit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc.refit, independent = independent, trim.idx = trim.idx)
+  }
   p.unadjust <- 1 - pchisq(refit$eta.stat, df = p_random)
   p.ind.unadjust <- 2*(1 - pnorm(abs(refit$eta.stat2)))
 
