@@ -3,7 +3,6 @@
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
   The main function to conduct FastMix pipeline.
-
 }
 \description{
  A new analytic pipeline, dubbed as FastMix, that combines the deconvolution step with the downstream analyses based on linear
