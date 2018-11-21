@@ -9,7 +9,9 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r load-package}
+```{r load-package, echo=FALSE, include=FALSE, message=FALSE}
+library(knitr)
+library(rmarkdown)
 library(FastMix)
 ```
 
@@ -90,6 +92,67 @@ I created true associations between the covariates and gene expressions in this 
 ### Structure of Simulated Data
 
 We provide a data example called `dataexample.rda` to examplify the simulated data. Notice that three data input are needed for function `FastMix()`.The object `CellProp` stores the proportion of cell types for each subject with 50 rows and 3 columns. The object `Demo` is a clinical dataset which consists of two variables, `Severity` and `Sex`, for each subjects with 50 rows and 2 columns. The object `GeneExp`, a  matrix with 5000 rows and 50 columns, stores the outcome of interest which consists of gene expression level with respect to subjects and genes. Based on the previous discussion, the observed bulk gene expression may be associated with a total of $L=11$ covariates: 3 cell proportions, 2 clinical variables, and 6 of the interaction terms.  
+
+### Using FastMix to analyze the simulated data
+
+Below is the default way of using `FastMix` to analyze the simulated data
+
+```{r run-Fastmix, include=TRUE, echo=TRUE}
+
+library(FastMix)
+data(dataexample)                       #loads the sample data
+#vignette("FastMix")                     #shows this vignette
+
+## fitting the gene expression data, cell proportions, and demographic
+## data in one step. It takes about 10~15 seconds to finish computing
+system.time(mod1 <- FastMix(GeneExp, CellProp, Demo))
+
+```
+
+Now let us summarize the results. First, let us check the fixed effects (the overall association between the covariates, their interactions, and the transcriptome
+
+```{r fixed-effects, include=TRUE, echo=TRUE, results='asis'}
+
+## 1. The overall association between covariates (with interactions)
+## and the entire transcriptome. We know that Cell1 is significantly
+## associated with all genes; and Cell1 has a significant interaction
+## with Severity (but not Sex). All other nine covariates are not
+## significant.
+kable(round(mod1$fixed.results, 4))
+
+```
+
+As we can see, FastMix correctly identified the only two truly significant covariates (Cell1 and the interaction between Cell1 and Severity).
+
+Next, we check the statistical power and type I error rate for the
+random effects. 
+
+
+```{r random-effects, include=TRUE, echo=TRUE, results='asis'}
+
+## (a) The first 250 genes have significant association with Cell1,
+## (b) genes 251-500 has significant association with Severity, (c)
+## genes 501 - 750 are significantly associated with Cell2.Severity,
+## and (d) genes 751 - 1000 are significantly associated with Cell2.Sex.
+m <- nrow(GeneExp)
+rr.cell1 <- c(Power=sum(mod1$re.ind.pvalue[1:250, "Cell1"]<0.05)/250,
+              TypeI.Err=sum(mod1$re.ind.pvalue[251:m, "Cell1"]<0.05)/(m-250))
+rr.severity <- c(Power=sum(mod1$re.ind.pvalue[251:500, "Severity"]<0.05)/250,
+                 TypeI.Err=sum(mod1$re.ind.pvalue[c(1:250, 501:m), "Severity"]<0.05)/(m-250))
+rr.cell2.severity <- c(Power=sum(mod1$re.ind.pvalue[501:750, "Cell2.Severity"]<0.05)/250,
+                 TypeI.Err=sum(mod1$re.ind.pvalue[c(1:500, 751:m), "Cell2.Severity"]<0.05)/(m-250))
+rr.cell2.sex <- c(Power=sum(mod1$re.ind.pvalue[751:1000, "Cell2.Sex"]<0.05)/250,
+                 TypeI.Err=sum(mod1$re.ind.pvalue[c(1:750, 1001:m), "Cell2.Sex"]<0.05)/(m-250))
+rr.others <- c(Power=NA, TypeI.Err=sum(mod1$re.ind.pvalue[, -c(1,4,10)]<0.05)/(m*8))
+retab <- cbind(Cell1=rr.cell1, Severity=rr.severity, Cell2.Severity=rr.cell2.severity,
+               Cell2.Sex=rr.cell2.sex, Others=rr.others)
+
+kable(round(retab, 3))
+
+```
+
+Judging from the above table, we see that for all covariates, the type I error is controlled at the nominal level. We also noticed that for all covariates, we have relatively good power to detect gene-specific associations between the covariates, including the interactions between cell proportion, clinical variables, and gene expressions.
+
 
 ## Real data example
 

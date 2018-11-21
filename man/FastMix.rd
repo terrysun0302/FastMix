@@ -9,7 +9,7 @@
 A wrapper for the main function \code{ols.eblup.trim()} to conduct deconvolution gene expression analysis with matching cell proportions.
 }
 \usage{
-FastMix(GeneExp, CellProp, Demo, ...)
+FastMix(GeneExp, CellProp, Demo, random="all", ...)
 }
 \arguments{
   \item{GeneExp}{
@@ -18,6 +18,10 @@ FastMix(GeneExp, CellProp, Demo, ...)
   \item{CellProp}{
   `CellProp` is a n by K dimensional matrix of cell proportions, where K is the number of cell proportions.
   }
+  \item{random}{
+  \code{random} is an index vector that specifies which variable(s)
+requires random effects -- by default, \code{random="all"}, which means that all covariates are paired with a random effect.
+  }
   \item{Demo}{
   \code{Demo} is a n by p dimensional matrix of clinical and demographic
 variables to be tested, where p is the number of covariates. 
@@ -25,10 +29,6 @@ variables to be tested, where p is the number of covariates.
   \item{...}{Additional parameters passed to \code{ols.eblup.trim()}. It
 includes the following useful options
  \itemize{
-  \item{random: }{
-  \code{random} is an index vector that specifies which variable(s)
-requires random effects -- by default, \code{random="all"}, which means that all covariates are paired with a random effect.
-  }
   \item{independent: }{\code{independent}
   specifies the correlation structure among random effects. The default
 value is TRUE, which means that all random effects are assumed to be independent.
@@ -90,8 +90,8 @@ data(dataexample)
 ## fit the model by default parameters
 mod1 <- FastMix(GeneExp, CellProp, Demo)
 
-## some variants: only select the 
-mod2 <- FastMix(GeneExp, CellProp, Demo, random=c(1,2), robust = FALSE)
+## some variants: only assign random effects to a subset of covariates, and uses non-robust method to estimate the covariance structure
+mod2 <- FastMix(GeneExp, CellProp, Demo, random=c(1,2,10), robust = FALSE)
 
 }                               % end examples.
 

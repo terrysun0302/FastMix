@@ -66,11 +66,13 @@
 
 ols.eblup.trim <- function(Des, Y, random = "all", independent = T, trim = 0.5, robust = "FastMix", trim.fix = FALSE){
   N <- length(Y) # number of total observations
-  p <- dim(Des)[2]-1 #ID is not a covariate but a label
+  ## Exclude the first column, ID, because it is just a label
+  covariates <- colnames(Des)[-1]; p <- length(covariates)
   if(length(random) == 1 && random == "all"){
     random <- 1:p
+  } else {
+    random <- random
   }
-  else random <- random
   DZ <- Des[, c(1,random+1)] #the dense form of Z matrix, not a block diagonal one
   dz <- as.data.frame(DZ) #a data.frame used for some particular functions
 
@@ -165,6 +167,7 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = T, trim = 0.5, 
   }
   re.pvalue <- 1 - pchisq(refit$eta.stat, df = p_random)
   re.ind.pvalue <- 2*(1 - pnorm(abs(refit$eta.stat2)))
+  colnames(re.ind.pvalue) <- covariates[random]
 
   #----------------------------------------------------------------------------#
   # the calculation of final outputs                                           #
@@ -214,7 +217,6 @@ FastMix <- function(GeneExp, CellProp, Demo, random="all", ...){
   ## assign gene names to part of the results x
   rownames(mod$beta.mat) <- gnames
   rownames(mod$re.ind.pvalue) <- gnames
-  colnames(mod$re.ind.pvalue) <- rownames(mod$fixed.results)
   names(mod$re.pvalue) <- gnames
   names(mod$eta) <- gnames
   return(mod)
