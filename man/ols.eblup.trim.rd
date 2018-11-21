@@ -2,14 +2,14 @@
 \alias{ols.eblup.trim}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-  The main function to conduct FastMix pipeline.
+  The main function for the FastMix pipeline.
 }
 \description{
  A new analytic pipeline, dubbed as FastMix, that combines the deconvolution step with the downstream analyses based on linear
-mixed eﬀects regression (LMER) model
+mixed eﬀects regression (LMER) model and a moment-matching algorithm.
 }
 \usage{
-ols.eblup.trim (Des, Y, random = "all", independent = T, trim = 0.5, robust = FALSE, trim.fix = FALSE)
+ols.eblup.trim (Des, Y, random = "all", independent = TRUE, trim = 0.5, robust = FALSE, trim.fix = FALSE)
 }
 \arguments{
   \item{Des}{

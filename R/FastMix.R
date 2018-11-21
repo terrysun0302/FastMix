@@ -64,7 +64,7 @@
 ################################ the function of proposed method #######################################
 ########################################################################################################
 
-ols.eblup.trim <- function(Des, Y, random = "all", independent = T, trim = 0.5, robust = FALSE, trim.fix = FALSE){
+ols.eblup.trim <- function(Des, Y, random = "all", independent = T, trim = 0.5, robust = "FastMix", trim.fix = FALSE){
   N <- length(Y) # number of total observations
   p <- dim(Des)[2]-1 #ID is not a covariate but a label
   if(length(random) == 1 && random == "all"){
@@ -112,7 +112,7 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = T, trim = 0.5, 
   else if(robust == "donostah") vc.refit <- robust.cov.est(ols, var.epsilon, XX, m, robust)
   else if(robust == "pairwiseQC") vc.refit <- robust.cov.est(ols, var.epsilon, XX, m, robust)
   ### porposed robust estimation
-  else if(robust == "FastMix"){
+  else if(robust == "FastMix") {
     vc <- .cov.est(ols, var.epsilon, XX, m, coef = coef_vector)
     #----------------------------------------------------------------------------#
     # trimming step based on the chi-square type statistics                      #
