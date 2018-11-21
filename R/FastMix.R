@@ -35,7 +35,7 @@
 #                                                                              #
 #  Returns a list                                                              #
 #                                                                              #
-#  beta.hat       the fix effects estimation                                   #
+#  fixed.results   fix effects estimation and inference                        #
 #                                                                              #
 #  beta.mat       individual coefficient estimation                            #
 #                                                                              #
@@ -51,9 +51,9 @@
 #                                                                              #
 #  eta            the chi sqiare type statsitics                               #
 #                                                                              #
-#  p.unadjust     the overall p-value for outlier detection                    #
+#  re.pvalue      the overall p-value for outlier detection                    #
 #                                                                              #
-#  p.ind.unadjust the individual p-value for outlier detection for each        #
+#  re.ind.pvalue the individual p-value for outlier detection for each        #
 #                 random effect.                                               #
 #                                                                              #
 #  out_idx        the potential covariates with outliers when robust           #
@@ -163,8 +163,8 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = T, trim = 0.5, 
   else if(trim.fix == TRUE){
     refit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc.refit, independent = independent, trim.idx = trim.idx)
   }
-  p.unadjust <- 1 - pchisq(refit$eta.stat, df = p_random)
-  p.ind.unadjust <- 2*(1 - pnorm(abs(refit$eta.stat2)))
+  re.pvalue <- 1 - pchisq(refit$eta.stat, df = p_random)
+  re.ind.pvalue <- 2*(1 - pnorm(abs(refit$eta.stat2)))
 
   #----------------------------------------------------------------------------#
   # the calculation of final outputs                                           #
@@ -172,16 +172,26 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = T, trim = 0.5, 
   betamat <- matrix(rep(refit$betahat, m), nrow = m, byrow = T)
   colnames(betamat) <- colnames(Des)[-1]
   betamat[,random] <- refit$blup + betamat[,random]
-  t.fixed <- refit$betahat/sqrt(diag(refit$sigmabeta))
+  t.fixed <- drop(refit$betahat/sqrt(diag(as.matrix(refit$sigmabeta))))
   vc.new <- sqrt(pmax(diag(vc.refit),0)*var.epsilon * refit$lambda.hat)
   VC <- data.frame(sqrt(var.epsilon), vc.new)
   Yhat <- lapply(1:m, function(i) Des[(number[i]+1):(number[i+1]), -1] %*% betamat[i,])
   Yhat <- do.call(rbind, Yhat)
   colnames(VC) <- c("sigma.e", "sigma.gamma")
 
-  list(beta.hat=refit$betahat, beta.mat=betamat, Yhat=Yhat, sigma.beta=refit$sigmabeta, VC=VC,
-       cov = refit$cov, t.fixed=t.fixed,
-       p.unadjust = p.unadjust, eta = refit$eta.stat,p.ind.unadjust=p.ind.unadjust, out_idx = norm_idx)
+  ## [11/21/2018 Xing] inference for the fixed effects
+  ## for now, the DF is sample size - regressors. This needs to be
+  ## changed in the near future
+  fixed.df <- min(m,N/m)-p-1
+  fixed.p <- 2*pt(abs(drop(t.fixed)), df=38, lower.tail=FALSE)
+  fixed.p.adj <- p.adjust(fixed.p, method="BH")
+  fixed.results <- cbind(betahat=drop(refit$betahat), tstat=t.fixed,
+                         p.value=fixed.p, p.adj=fixed.p.adj)
+
+  list(fixed.results=fixed.results, beta.mat=betamat, Yhat=Yhat,
+       sigma.beta=refit$sigmabeta, VC=VC, cov = refit$cov, 
+       re.pvalue = re.pvalue, eta = refit$eta.stat,
+       re.ind.pvalue=re.ind.pvalue, out_idx = norm_idx)
 }
 
 
@@ -203,8 +213,9 @@ FastMix <- function(GeneExp, CellProp, Demo, random="all", ...){
   mod$Yhat <- NULL
   ## assign gene names to part of the results x
   rownames(mod$beta.mat) <- gnames
-  rownames(mod$p.ind.unadjust) <- gnames
-  names(mod$p.unadjust) <- gnames
+  rownames(mod$re.ind.pvalue) <- gnames
+  colnames(mod$re.ind.pvalue) <- rownames(mod$fixed.results)
+  names(mod$re.pvalue) <- gnames
   names(mod$eta) <- gnames
   return(mod)
 }

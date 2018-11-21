@@ -41,15 +41,15 @@ ols.eblup.trim (Des, Y, random = "all", independent = TRUE, trim = 0.5, robust =
 \value{
 %%  ~Describe the value returned
 %%  If it is a LIST, use
-\item{beta.hat }{the fix effect estimation.}
+\item{fixed.results }{the estimated fix effects and their p-values. They are
+overall effects shared by all genes.}
 \item{beta.mat }{individual coefficient estimation.}
 \item{Yhat}{fitted response.}
 \item{sigma.beta}{the covariance estimation of fixed effect.}
 \item{VC }{variance component estimation. The first column is the one for common random error. The second column is the one for random effects.}
-\item{t.fixed }{the t value for fixed effects. }
 \item{eta}{the chi sqiare type statsitics used for p-value calculation.}
-\item{p.unadjust}{the overall p-value for outlier detection.}
-\item{p.ind.unadjust}{the individual p-value for outlier detection for each random effect.}
+\item{re.pvalue}{the overall p-value for detecting outliers in random effects.}
+\item{re.ind.pvalue}{the individual p-value for outlier detection for each random effect.}
 \item{out_idx}{he potential covariates with outliers when robust = "FastMix. It is NULL when robust != "FastMix"}
 %% ...
 }
