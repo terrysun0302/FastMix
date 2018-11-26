@@ -107,67 +107,128 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = T, trim = 0.5, 
   norm_idx = c()
   p_random = length(random)
 
-  if(robust == FALSE) vc.refit <- .cov.est(ols, var.epsilon, XX, m, coef = coef_vector)
-  ### robust estimation by existing method from package "robust"
-  else if(robust == "mcd") vc.refit <- robust.cov.est(ols, var.epsilon, XX, m, robust)
-  else if(robust == "weighted") vc.refit <- robust.cov.est(ols, var.epsilon, XX, m, robust)
-  else if(robust == "donostah") vc.refit <- robust.cov.est(ols, var.epsilon, XX, m, robust)
-  else if(robust == "pairwiseQC") vc.refit <- robust.cov.est(ols, var.epsilon, XX, m, robust)
-  ### porposed robust estimation
-  else if(robust == "FastMix") {
-    vc <- .cov.est(ols, var.epsilon, XX, m, coef = coef_vector)
-    #----------------------------------------------------------------------------#
-    # trimming step based on the chi-square type statistics                      #
-    #----------------------------------------------------------------------------#
+  if(p_random > 1){ # when the number of random effects is larger than 1
+    if(robust == FALSE) vc.refit <- .cov.est(ols, var.epsilon, XX, m, coef = coef_vector)
+    ### robust estimation by existing method from package "robust"
+    else if(robust == "mcd") vc.refit <- robust.cov.est(ols, var.epsilon, XX, m, robust)
+    else if(robust == "weighted") vc.refit <- robust.cov.est(ols, var.epsilon, XX, m, robust)
+    else if(robust == "donostah") vc.refit <- robust.cov.est(ols, var.epsilon, XX, m, robust)
+    else if(robust == "pairwiseQC") vc.refit <- robust.cov.est(ols, var.epsilon, XX, m, robust)
+    ### porposed robust estimation
+    else if(robust == "FastMix") {
+      vc <- .cov.est(ols, var.epsilon, XX, m, coef = coef_vector)
+      #----------------------------------------------------------------------------#
+      # trimming step based on the chi-square type statistics                      #
+      #----------------------------------------------------------------------------#
 
-    ### 10/11/2018 new added parts
-    initialfit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc, independent = independent)
-    B_cov = lapply(1:m, function(i) vc + var.epsilon * xx[[i]])
-    B_cov_inv_half = lapply(1:m, function(i) {eig = eigen(solve(B_cov[[i]])); eig$vectors %*% sqrt(diag(eig$values)) %*% t(eig$vectors)})
-    Norm_B = lapply(1:m, function(i) ols[i, ] %*% B_cov_inv_half[[i]])
-    Norm_B = do.call(rbind,Norm_B)
+      ### 10/11/2018 new added parts
+      initialfit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc, independent = independent)
+      B_cov = lapply(1:m, function(i) vc + var.epsilon * xx[[i]])
+      B_cov_inv_half = lapply(1:m, function(i) {eig = eigen(solve(B_cov[[i]])); eig$vectors %*% sqrt(diag(eig$values)) %*% t(eig$vectors)})
+      Norm_B = lapply(1:m, function(i) ols[i, ] %*% B_cov_inv_half[[i]])
+      Norm_B = do.call(rbind,Norm_B)
 
-    ### 10/17/2018  used to do test : test 1 and test 2
-    norm_test = apply(initialfit$eta.stat2,2,function(x) shapiro.test(x)$p)
-    norm_idx = norm_test < 0.05
-    trimdf <- sum(norm_idx)
+      ### 10/17/2018  used to do test : test 1 and test 2
+      norm_test = apply(initialfit$eta.stat2,2,function(x) shapiro.test(x)$p)
+      norm_idx = norm_test < 0.05
+      trimdf <- sum(norm_idx)
 
-    if(trimdf > 0){
-      chi_stat = lapply(1:m, function(i) sum(Norm_B[i, norm_idx == T]^2))
-      chi_stat = unlist(chi_stat)
-      trim.idx <- which(chi_stat %in% chi_stat[order(chi_stat)][1:(m*(1 - trim))])
-      simchi <- rchisq(1000000, df = trimdf)
-      lambda.quan <-  trimdf /mean((simchi[order(simchi)][1:(1000000*(1-trim))]))
-      if(trimdf == 1) {
-        mult = var(Norm_B[trim.idx,norm_idx == T])*lambda.quan
+      if(trimdf > 0){
+        chi_stat = lapply(1:m, function(i) sum(Norm_B[i, norm_idx == T]^2))
+        chi_stat = unlist(chi_stat)
+        trim.idx <- which(chi_stat %in% chi_stat[order(chi_stat)][1:(m*(1 - trim))])
+        simchi <- rchisq(1000000, df = trimdf)
+        lambda.quan <-  trimdf /mean((simchi[order(simchi)][1:(1000000*(1-trim))]))
+        if(trimdf == 1) {
+          mult = var(Norm_B[trim.idx,norm_idx == T])*lambda.quan
+        }
+        else{
+          mult = diag(cov(Norm_B[trim.idx,norm_idx == T]))*lambda.quan
+        }
+        coef_vector = c()
+        coef_vector[norm_idx == T] = mult
+        coef_vector[norm_idx == F] = 1
+        vc.refit <- .cov.est(ols, var.epsilon, XX, m, coef = coef_vector)
       }
       else{
-        mult = diag(cov(Norm_B[trim.idx,norm_idx == T]))*lambda.quan
+        vc.refit = vc
       }
-      coef_vector = c()
-      coef_vector[norm_idx == T] = mult
-      coef_vector[norm_idx == F] = 1
-      vc.refit <- .cov.est(ols, var.epsilon, XX, m, coef = coef_vector)
+      if(sum(diag(vc.refit) <= 0) > 0){
+        warning("Fitting problems caused by trimming. Please try a smaller trim coefficient.")
+      }
     }
-    else{
-      vc.refit = vc
+
+    ### the option for fix effect
+    if(trim.fix == FALSE){
+      refit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc.refit, independent = independent)
     }
-    if(sum(diag(vc.refit) <= 0) > 0){
-      warning("Fitting problems caused by trimming. Please try a smaller trim coefficient.")
+
+    else if(trim.fix == TRUE){
+      refit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc.refit, independent = independent, trim.idx = trim.idx)
     }
+    re.pvalue <- 1 - pchisq(refit$eta.stat, df = p_random)
+    re.ind.pvalue <- 2*(1 - pnorm(abs(refit$eta.stat2)))
+    colnames(re.ind.pvalue) <- covariates[random]
+  }
+  else{
+    if(robust == FALSE) vc.refit <- .cov.est(ols, var.epsilon, XX, m, coef = coef_vector)
+    ### robust estimation by existing method from package "robust"
+    else if(robust == "mcd") stop("This method only works with more than 1 random effect.")
+    else if(robust == "weighted") stop("This method only works with more than 1 random effect.")
+    else if(robust == "donostah") stop("This method only works with more than 1 random effect.")
+    else if(robust == "pairwiseQC") stop("This method only works with more than 1 random effect.")
+    ### porposed robust estimation
+    else if(robust == "FastMix") {
+      vc <- .cov.est(ols, var.epsilon, XX, m, coef = coef_vector)
+      #----------------------------------------------------------------------------#
+      # trimming step based on the chi-square type statistics                      #
+      #----------------------------------------------------------------------------#
+
+      ### 10/11/2018 new added parts
+      initialfit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc, independent = independent)
+      B_cov = lapply(1:m, function(i) vc + var.epsilon * xx[[i]])
+      B_cov_inv_half = lapply(1:m, function(i) {eig = eigen(solve(B_cov[[i]])); eig$vectors %*% sqrt((eig$values)) %*% t(eig$vectors)})
+      Norm_B = lapply(1:m, function(i) ols[i, ] %*% B_cov_inv_half[[i]])
+      Norm_B = do.call(rbind,Norm_B)
+
+      ### 10/17/2018  used to do test : test 1 and test 2
+      norm_test = apply(initialfit$eta.stat2,2,function(x) shapiro.test(x)$p)
+      norm_idx = norm_test < 0.05
+      trimdf <- sum(norm_idx)
+
+      if(trimdf > 0){
+        chi_stat = lapply(1:m, function(i) sum(Norm_B[i, norm_idx == T]^2))
+        chi_stat = unlist(chi_stat)
+        trim.idx <- which(chi_stat %in% chi_stat[order(chi_stat)][1:(m*(1 - trim))])
+        simchi <- rchisq(1000000, df = trimdf)
+        lambda.quan <-  trimdf /mean((simchi[order(simchi)][1:(1000000*(1-trim))]))
+
+        mult = var(Norm_B[trim.idx,1])*lambda.quan
+
+        coef_vector = c(mult)
+        vc.refit <- .cov.est(ols, var.epsilon, XX, m, coef = coef_vector)
+      }
+      else{
+        vc.refit = vc
+      }
+      if(vc.refit <= 0){
+        warning("Fitting problems caused by trimming. Please try a smaller trim coefficient.")
+      }
+    }
+
+    ### the option for fix effect
+    if(trim.fix == FALSE){
+      refit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc.refit, independent = independent)
+    }
+
+    else if(trim.fix == TRUE){
+      refit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc.refit, independent = independent, trim.idx = trim.idx)
+    }
+    re.pvalue <- 1 - pchisq(refit$eta.stat, df = p_random)
+    re.ind.pvalue <- 2*(1 - pnorm(abs(refit$eta.stat2)))
+    colnames(re.ind.pvalue) <- covariates[random]
   }
 
-  ### the option for fix effect
-  if(trim.fix == FALSE){
-    refit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc.refit, independent = independent)
-  }
-
-  else if(trim.fix == TRUE){
-    refit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc.refit, independent = independent, trim.idx = trim.idx)
-  }
-  re.pvalue <- 1 - pchisq(refit$eta.stat, df = p_random)
-  re.ind.pvalue <- 2*(1 - pnorm(abs(refit$eta.stat2)))
-  colnames(re.ind.pvalue) <- covariates[random]
 
   #----------------------------------------------------------------------------#
   # the calculation of final outputs                                           #
@@ -192,7 +253,7 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = T, trim = 0.5, 
                          p.value=fixed.p, p.adj=fixed.p.adj)
 
   list(fixed.results=fixed.results, beta.mat=betamat, Yhat=Yhat,
-       sigma.beta=refit$sigmabeta, VC=VC, cov = refit$cov, 
+       sigma.beta=refit$sigmabeta, VC=VC, cov = refit$cov,
        re.pvalue = re.pvalue, eta = refit$eta.stat,
        re.ind.pvalue=re.ind.pvalue, out_idx = norm_idx)
 }
