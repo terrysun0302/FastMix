@@ -49,7 +49,7 @@
 #                                                                              #
 #  t.fixed        the t value for fixed effects                                #
 #                                                                              #
-#  eta            the chi sqiare type statsitics                               #
+#  eta            the chi square type statsitics                               #
 #                                                                              #
 #  re.pvalue      the overall p-value for outlier detection                    #
 #                                                                              #
@@ -64,7 +64,7 @@
 ################################ the function of proposed method #######################################
 ########################################################################################################
 
-ols.eblup.trim <- function(Des, Y, random = "all", independent = T, trim = 0.5, robust = "FastMix", trim.fix = FALSE){
+ols.eblup.trim <- function(Des, Y, random = "all", independent = T, trim = 0.5, robust = "FastMix", trim.fix = TRUE){
   N <- length(Y) # number of total observations
   ## Exclude the first column, ID, because it is just a label
   covariates <- colnames(Des)[-1]; p <- length(covariates)
@@ -186,7 +186,7 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = T, trim = 0.5, 
   ## for now, the DF is sample size - regressors. This needs to be
   ## changed in the near future
   fixed.df <- min(m,N/m)-p-1
-  fixed.p <- 2*pt(abs(drop(t.fixed)), df=38, lower.tail=FALSE)
+  fixed.p <- 2*pt(abs(drop(t.fixed)), df=fixed.df, lower.tail=FALSE)
   fixed.p.adj <- p.adjust(fixed.p, method="BH")
   fixed.results <- cbind(betahat=drop(refit$betahat), tstat=t.fixed,
                          p.value=fixed.p, p.adj=fixed.p.adj)
