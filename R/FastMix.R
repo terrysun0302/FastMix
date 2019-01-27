@@ -28,6 +28,8 @@
 #                 correlation pairwise estimator. All these algorithms come    #
 #                 from the R package "robust".                                 #
 #                 "FastMix" is the proposed trimming method.                   #
+#  test           the method to test DEGs. "1" is Gaussian mixture model; "2"  #
+#                 is Anderson-darling normal test. The default value is "1"    #
 #                                                                              #
 #  trim.fix       If only consider trimmed subjects in fix effect estiamtion.  #
 #                                                                              #
@@ -64,7 +66,7 @@
 ################################ the function of proposed method #######################################
 ########################################################################################################
 
-ols.eblup.trim <- function(Des, Y, random = "all", independent = T, trim = 0.5, robust = "FastMix", trim.fix = TRUE){
+ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, robust = "FastMix", test = 1, trim.fix = TRUE){
   N <- length(Y) # number of total observations
   ## Exclude the first column, ID, because it is just a label
   covariates <- colnames(Des)[-1]; p <- length(covariates)
@@ -107,30 +109,52 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = T, trim = 0.5, 
   norm_idx = c()
   p_random = length(random)
 
+  trim.idx = NULL
+
   if(p_random > 1){ # when the number of random effects is larger than 1
-    if(robust == FALSE) vc.refit <- .cov.est(ols, var.epsilon, XX, m, coef = coef_vector)
+    if(robust == FALSE) {
+      vc.refit <- .cov.est(ols, var.epsilon, XX, m, coef = coef_vector)
+
+      if(sum(diag(vc.refit) <= 0) > 0){
+        warning("Covariates without random effects may be included in random.")
+      }
+    }
     ### robust estimation by existing method from package "robust"
     else if(robust == "mcd") vc.refit <- robust.cov.est(ols, var.epsilon, XX, m, robust)
     else if(robust == "weighted") vc.refit <- robust.cov.est(ols, var.epsilon, XX, m, robust)
     else if(robust == "donostah") vc.refit <- robust.cov.est(ols, var.epsilon, XX, m, robust)
     else if(robust == "pairwiseQC") vc.refit <- robust.cov.est(ols, var.epsilon, XX, m, robust)
+
     ### porposed robust estimation
     else if(robust == "FastMix") {
       vc <- .cov.est(ols, var.epsilon, XX, m, coef = coef_vector)
+
+      if(sum(diag(vc) <= 0) > 0){
+        warning("Covariates without random effects may be included in random.")
+      }
+
       #----------------------------------------------------------------------------#
       # trimming step based on the chi-square type statistics                      #
       #----------------------------------------------------------------------------#
 
       ### 10/11/2018 new added parts
-      initialfit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc, independent = independent)
+      initialfit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc, independent = independent, trim.idx = trim.idx)
       B_cov = lapply(1:m, function(i) vc + var.epsilon * xx[[i]])
       B_cov_inv_half = lapply(1:m, function(i) {eig = eigen(solve(B_cov[[i]])); eig$vectors %*% sqrt(diag(eig$values)) %*% t(eig$vectors)})
       Norm_B = lapply(1:m, function(i) ols[i, ] %*% B_cov_inv_half[[i]])
       Norm_B = do.call(rbind,Norm_B)
 
-      ### 10/17/2018  used to do test : test 1 and test 2
-      norm_test = apply(initialfit$eta.stat2,2,function(x) shapiro.test(x)$p)
-      norm_idx = norm_test < 0.05
+      ### 1/20/2019  used to do test : test 1: gaussian mixed model test; test 2: anderson darling test
+      if(test == 1){
+        #norm_test = apply(initialfit$eta.stat2,2,function(x) shapiro.test(x)$p)
+        norm_test = apply(initialfit$eta.stat3,2,function(a) summary(Mclust(a, x = mclustBIC(a, verbose = F), verbose = F), parameters = TRUE)$G)
+        norm_idx = norm_test > 1
+      }
+      else{
+        #norm_test = apply(initialfit$eta.stat3,2,function(x) shapiro.test(x)$p): this test has sample size limitation
+        norm_test = apply(initialfit$eta.stat3,2,function(x) ad.test(x)$p) #: this test has sample size limitation
+        norm_idx = norm_test < 0.05
+      }
       trimdf <- sum(norm_idx)
 
       if(trimdf > 0){
@@ -160,18 +184,28 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = T, trim = 0.5, 
 
     ### the option for fix effect
     if(trim.fix == FALSE){
-      refit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc.refit, independent = independent)
+      refit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc.refit, independent = independent, trim.idx = NULL)
     }
 
     else if(trim.fix == TRUE){
       refit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc.refit, independent = independent, trim.idx = trim.idx)
     }
     re.pvalue <- 1 - pchisq(refit$eta.stat, df = p_random)
+
     re.ind.pvalue <- 2*(1 - pnorm(abs(refit$eta.stat2)))
+    # if(test == 1) re.ind.pvalue <- 2*(1 - pnorm(abs(refit$eta.stat2)))
+    # else{re.ind.pvalue <- 2*(1 - pnorm(abs(refit$eta.stat3)))}
     colnames(re.ind.pvalue) <- covariates[random]
   }
   else{
-    if(robust == FALSE) vc.refit <- .cov.est(ols, var.epsilon, XX, m, coef = coef_vector)
+    if(robust == FALSE) {
+      vc.refit <- .cov.est(ols, var.epsilon, XX, m, coef = coef_vector)
+
+      if(sum(diag(vc.refit) <= 0) > 0){
+        warning("Covariates without random effects may be included in random.")
+      }
+    }
+
     ### robust estimation by existing method from package "robust"
     else if(robust == "mcd") stop("This method only works with more than 1 random effect.")
     else if(robust == "weighted") stop("This method only works with more than 1 random effect.")
@@ -180,6 +214,9 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = T, trim = 0.5, 
     ### porposed robust estimation
     else if(robust == "FastMix") {
       vc <- .cov.est(ols, var.epsilon, XX, m, coef = coef_vector)
+      if(sum(diag(vc) <= 0) > 0){
+        warning("Covariates without random effects may be included in random.")
+      }
       #----------------------------------------------------------------------------#
       # trimming step based on the chi-square type statistics                      #
       #----------------------------------------------------------------------------#
@@ -191,9 +228,17 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = T, trim = 0.5, 
       Norm_B = lapply(1:m, function(i) ols[i, ] %*% B_cov_inv_half[[i]])
       Norm_B = do.call(rbind,Norm_B)
 
-      ### 10/17/2018  used to do test : test 1 and test 2
-      norm_test = apply(initialfit$eta.stat2,2,function(x) shapiro.test(x)$p)
-      norm_idx = norm_test < 0.05
+      ### 1/20/2019  used to do test : test 1: gaussian mixed model test; test 2: anderson darling test
+      if(test == 1){
+        #norm_test = apply(initialfit$eta.stat2,2,function(x) shapiro.test(x)$p)
+        norm_test = apply(initialfit$eta.stat3,2,function(a) summary(Mclust(a, x = mclustBIC(a, verbose = F), verbose = F), parameters = TRUE)$G)
+        norm_idx = norm_test > 1
+      }
+      else{
+        #norm_test = apply(initialfit$eta.stat3,2,function(x) shapiro.test(x)$p): this test has sample size limitation
+        norm_test = apply(initialfit$eta.stat3,2,function(x) ad.test(x)$p) #: this test has sample size limitation
+        norm_idx = norm_test < 0.05
+      }
       trimdf <- sum(norm_idx)
 
       if(trimdf > 0){
@@ -210,9 +255,6 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = T, trim = 0.5, 
       }
       else{
         vc.refit = vc
-      }
-      if(vc.refit <= 0){
-        warning("Fitting problems caused by trimming. Please try a smaller trim coefficient.")
       }
     }
 

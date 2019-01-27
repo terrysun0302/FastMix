@@ -23,7 +23,9 @@ data_gen <- function(m, n, seed = 1, outlier = T, cor = 0, balance = T){
   ## mean interactions
   aa <- rep(0, 6); aa[1] <- .75
 
-  Bmat <- t(replicate(m, c(bb, 0, 0, aa))); L <- ncol(Bmat)
+  Bmat <- t(replicate(m, c(bb, 0, 0, aa)))
+  #Bmat <- t(replicate(m, c(1.5, 0.5, 0.5, -0.5, -0.5, 0.75, 0.5, 0.5, 0.5, -0.5, -0.5)))
+  L <- ncol(Bmat)
   sdvec <- (c(rep(sigma2.u, 3), rep(sigma2.e,2), rep(sigma2.alpha, 6)))
 
   if(outlier == T){
@@ -41,9 +43,9 @@ data_gen <- function(m, n, seed = 1, outlier = T, cor = 0, balance = T){
     if(cor == 0){
       Gmat <- matrix(rnorm(L*m),m,L) %*% diag(sdvec)
       sigmamat = diag(sdvec^2)
-      # for(i in 1:4){
-      #   Gmat[(m * 0.05 * (i-1)+1):(m * 0.05 * i), idx[i]] <- Gmat[(m * 0.05 * (i-1)+1):(m * 0.05 * i), idx[i]]
-      # }
+      for(i in 1:4){
+        Gmat[(m * 0.05 * (i-1)+1):(m * 0.05 * i), idx[i]] <- Gmat[(m * 0.05 * (i-1)+1):(m * 0.05 * i), idx[i]]
+      }
     }
     else{
       cormat <- matrix(cor, ncol = 11, nrow = 11)
@@ -52,7 +54,7 @@ data_gen <- function(m, n, seed = 1, outlier = T, cor = 0, balance = T){
       a = chol(sigmamat)
       Gmat <- matrix(rnorm(L*m),m,L) %*% a
       for(i in 1:4){
-        Gmat[(m * 0.05 * (i-1)+1):(m * 0.05 * i), idx[i]] <- Gmat[(m * 0.05 * (i-1)+1):(m * 0.05 * i), idx[i]]/2
+        Gmat[(m * 0.05 * (i-1)+1):(m * 0.05 * i), idx[i]] <- Gmat[(m * 0.05 * (i-1)+1):(m * 0.05 * i), idx[i]]
       }
     }
   }
@@ -61,9 +63,6 @@ data_gen <- function(m, n, seed = 1, outlier = T, cor = 0, balance = T){
     if(cor == 0){
       Gmat <- matrix(rnorm(L*m),m,L) %*% diag(sdvec)
       sigmamat = diag(sdvec^2)
-      # for(i in 1:4){
-      #   Gmat[(m * 0.05 * (i-1)+1):(m * 0.05 * i), idx[i]] <- Gmat[(m * 0.05 * (i-1)+1):(m * 0.05 * i), idx[i]]
-      # }
     }
     else{
       cormat <- matrix(cor, ncol = 11, nrow = 11)
@@ -71,9 +70,6 @@ data_gen <- function(m, n, seed = 1, outlier = T, cor = 0, balance = T){
       sigmamat <- sweep(sweep(cormat, 1, sdvec, "*"), 2, sdvec, "*")
       a = chol(sigmamat)
       Gmat <- matrix(rnorm(L*m),m,L) %*% a
-      for(i in 1:4){
-        Gmat[(m * 0.05 * (i-1)+1):(m * 0.05 * i), idx[i]] <- Gmat[(m * 0.05 * (i-1)+1):(m * 0.05 * i), idx[i]]/2
-      }
     }
   }
 
@@ -220,6 +216,9 @@ hy.ols.blup.wrapper <- function(Des, Y, var.epsilon, number, random = random, vc
     #
     eta.stat2 <- lapply(1:m, function(i) {a = eigen(solve(var.eblup[[i]])); a$vectors * sqrt(a$values) * t(a$vectors) * blup[i,]})
     eta.stat2 <- t(do.call("cbind",eta.stat2))
+    
+    eta.stat3 <- lapply(1:m, function(i) {1/sqrt(diag(var.eblup[[i]])) * blup[i,]})
+    eta.stat3 <- t(do.call("cbind",eta.stat3))
 
     eta.test <- lapply(1:m, function(i) {blup[i,]/sqrt((var.eblup[[i]]))})
     eta.test <- t(do.call("cbind",eta.test))
@@ -325,12 +324,15 @@ hy.ols.blup.wrapper <- function(Des, Y, var.epsilon, number, random = random, vc
   eta.stat2 <- lapply(1:m, function(i) {a = eigen(solve(var.eblup[[i]])); a$vectors %*% diag(sqrt(a$values)) %*% t(a$vectors) %*% blup[i,]})
   eta.stat2 <- t(do.call("cbind",eta.stat2))
 
+  eta.stat3 <- lapply(1:m, function(i) {1/sqrt(diag(var.eblup[[i]])) * blup[i,]})
+  eta.stat3 <- t(do.call("cbind",eta.stat3))
+  
   eta.test <- lapply(1:m, function(i) {blup[i,]/sqrt(diag(var.eblup[[i]]))})
   eta.test <- t(do.call("cbind",eta.test))
   ## the covariance estimation
   cov = vc.hat*var.epsilon * lambda.hat
   rownames(cov) <- colnames(cov) <- colnames(Des)[-1][random]
-  return(list(eta.stat = eta.stat, eta.stat2 = eta.stat2, eta.test = eta.test,
+  return(list(eta.stat = eta.stat, eta.stat2 = eta.stat2, eta.stat3 = eta.stat3, eta.test = eta.test,
               blup = blup, betahat = betahat, sigmabeta = sigmabeta,
               cov = cov, lambda.hat = lambda.hat))
 }
