@@ -115,6 +115,7 @@ DataPrep <- function(GeneExp, CellProp, Demo){
   if (is.null(colnames(Demo))) colnames(Demo) <- paste0("Var", 1:ncol(Demo))
   ## standardize all clinical covariates
   Demo0 <- scale(Demo)
+  #Demo0 = Demo
   ## create interaction terms
   Crossterms.idx <- cbind(rep(1:ncol(CellProp), ncol(Demo0)),
                           rep(1:ncol(Demo0), each=ncol(CellProp)))
@@ -216,7 +217,7 @@ hy.ols.blup.wrapper <- function(Des, Y, var.epsilon, number, random = random, vc
     #
     eta.stat2 <- lapply(1:m, function(i) {a = eigen(solve(var.eblup[[i]])); a$vectors * sqrt(a$values) * t(a$vectors) * blup[i,]})
     eta.stat2 <- t(do.call("cbind",eta.stat2))
-    
+
     eta.stat3 <- lapply(1:m, function(i) {1/sqrt(diag(var.eblup[[i]])) * blup[i,]})
     eta.stat3 <- t(do.call("cbind",eta.stat3))
 
@@ -326,7 +327,7 @@ hy.ols.blup.wrapper <- function(Des, Y, var.epsilon, number, random = random, vc
 
   eta.stat3 <- lapply(1:m, function(i) {1/sqrt(diag(var.eblup[[i]])) * blup[i,]})
   eta.stat3 <- t(do.call("cbind",eta.stat3))
-  
+
   eta.test <- lapply(1:m, function(i) {blup[i,]/sqrt(diag(var.eblup[[i]]))})
   eta.test <- t(do.call("cbind",eta.test))
   ## the covariance estimation
