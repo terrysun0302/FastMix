@@ -37,6 +37,10 @@ value is TRUE, which means that all random effects are assumed to be independent
     the trimming percentage when accounting for outliers.
     Default valie is 0.5 (50\%).
   }
+   \item{test: }{
+    the test method for DEGs. "1" is Gaussian mixture model, "2" is
+Anderson-darling normal test. Default value is "1".
+  }
   \item{robust: }{\code{robust} specifies whether robust covariance
 estimation is implemented and 
 which method to use:  "FALSE" for non-robust estimation; "mcd" for the

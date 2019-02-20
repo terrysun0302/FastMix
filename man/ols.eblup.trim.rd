@@ -9,7 +9,8 @@
 mixed eﬀects regression (LMER) model and a moment-matching algorithm.
 }
 \usage{
-ols.eblup.trim (Des, Y, random = "all", independent = TRUE, trim = 0.5, robust = FALSE, trim.fix = FALSE)
+ols.eblup.trim (Des, Y, random = "all", independent = TRUE, trim = 0.5,
+test = 1, robust = FALSE, trim.fix = FALSE)
 }
 \arguments{
   \item{Des}{
@@ -29,8 +30,8 @@ ols.eblup.trim (Des, Y, random = "all", independent = TRUE, trim = 0.5, robust =
     Default valie is 0.5 (50\%).
   }
    \item{test}{
-    the test method for DEGs. "1" is Gaussian mixture model, "2" is Anderson-darling normal test.
-    Default valie is "1".
+    the test method for DEGs. "1" is Gaussian mixture model, "2" is
+Anderson-darling normal test. Default value is "1".
   }
   \item{robust}{
   Specifies whether robust covariance estimation is implemented and which method to use:  "FALSE" for non-robust estimation; "mcd" for the MCD algorithm of    Rousseeuw and Van Driessen; "weighted" for the Reweighted MCD; "donostah" for the Donoho-Stahel projection based estimator; "pairwiseQC" for the     orthogonalized quadrant correlation pairwise estimator. All these algorithms come from the R package `robust`. "FastMix" is the proposed trimming method.
