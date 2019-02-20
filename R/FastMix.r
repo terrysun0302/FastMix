@@ -101,7 +101,7 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
   ols <- do.call(rbind, ols)
   ## covbeta <- cov(ols)
 
-  xx <- lapply(1:m, function(i) solve(t(Des[(number[i]+1):(number[i+1]),(1 +random)]) %*% Des[(number[i]+1):(number[i+1]),(1 +random)]))
+  xx <- lapply(1:m, function(i) rsolve(t(Des[(number[i]+1):(number[i+1]),(1 +random)]) %*% Des[(number[i]+1):(number[i+1]),(1 +random)]))
   XX <- Reduce("+", xx)
   coef_vector = rep(1, length(random))
 
@@ -114,9 +114,11 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
   if(p_random > 1){ # when the number of random effects is larger than 1
     if(robust == FALSE) {
       vc.refit <- .cov.est(ols, var.epsilon, XX, m, coef = coef_vector)
-
-      if(sum(diag(vc.refit) <= 0) > 0){
-        warning("Covariates without random effects may be included in random.")
+      norandom <- names(which(diag(vc.refit) <= 0))
+      if(length(norandom) > 0){
+        warning(paste0("Some covariates designated with random effects (",
+                       paste(norandom, collapse=", "),
+                       ") have zero empirical variance."))
       }
     }
     ### robust estimation by existing method from package "robust"
@@ -128,11 +130,12 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
     ### porposed robust estimation
     else if(robust == "FastMix") {
       vc <- .cov.est(ols, var.epsilon, XX, m, coef = coef_vector)
-
-      if(sum(diag(vc) <= 0) > 0){
-        warning("Covariates without random effects may be included in random.")
+      norandom <- names(which(diag(vc) <= 0))
+      if(length(norandom) > 0){
+        warning(paste0("Some covariates designated with random effects (",
+                       paste(norandom, collapse=", "),
+                       ") have zero empirical variance."))
       }
-
       #----------------------------------------------------------------------------#
       # trimming step based on the chi-square type statistics                      #
       #----------------------------------------------------------------------------#
@@ -140,7 +143,7 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
       ### 10/11/2018 new added parts
       initialfit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc, independent = independent, trim.idx = trim.idx)
       B_cov = lapply(1:m, function(i) vc + var.epsilon * xx[[i]])
-      B_cov_inv_half = lapply(1:m, function(i) {eig = eigen(solve(B_cov[[i]])); eig$vectors %*% sqrt(diag(eig$values)) %*% t(eig$vectors)})
+      B_cov_inv_half = lapply(1:m, function(i) {eig = eigen(rsolve(B_cov[[i]])); eig$vectors %*% sqrt(diag(eig$values)) %*% t(eig$vectors)})
       Norm_B = lapply(1:m, function(i) ols[i, ] %*% B_cov_inv_half[[i]])
       Norm_B = do.call(rbind,Norm_B)
 
@@ -163,7 +166,10 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
       if(trimdf > 0){
         chi_stat = lapply(1:m, function(i) sum(Norm_B[i, norm_idx == T]^2))
         chi_stat = unlist(chi_stat)
+        ## we remove extremely large chi_stat by amount 'trim' (by default=0.5)
         trim.idx <- which(chi_stat %in% chi_stat[order(chi_stat)][1:(m*(1 - trim))])
+        ## truncated chi_stat follows a truncated chisq distribution;
+        ## for now we use MC method to calculate lambda_alpha (Eq. 20 in the manuscript)
         simchi <- rchisq(1000000, df = trimdf)
         lambda.quan <-  trimdf /mean((simchi[order(simchi)][1:(1000000*(1-trim))]))
         if(trimdf == 1) {
@@ -188,9 +194,7 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
     ### the option for fix effect
     if(trim.fix == FALSE){
       refit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc.refit, independent = independent, trim.idx = NULL)
-    }
-
-    else if(trim.fix == TRUE){
+    } else {
       refit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc.refit, independent = independent, trim.idx = trim.idx)
     }
     re.pvalue <- 1 - pchisq(refit$eta.stat, df = p_random)
@@ -203,9 +207,11 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
   else{
     if(robust == FALSE) {
       vc.refit <- .cov.est(ols, var.epsilon, XX, m, coef = coef_vector)
-
-      if(sum(diag(vc.refit) <= 0) > 0){
-        warning("Covariates without random effects may be included in random.")
+      norandom <- names(which(diag(vc.refit) <= 0))
+      if(length(norandom) > 0){
+        warning(paste0("Some covariates designated with random effects (",
+                       paste(norandom, collapse=", "),
+                       ") have zero empirical variance."))
       }
     }
 
@@ -217,8 +223,11 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
     ### porposed robust estimation
     else if(robust == "FastMix") {
       vc <- .cov.est(ols, var.epsilon, XX, m, coef = coef_vector)
-      if(sum(diag(vc) <= 0) > 0){
-        warning("Covariates without random effects may be included in random.")
+      norandom <- names(which(diag(vc) <= 0))
+      if(length(norandom) > 0){
+        warning(paste0("Some covariates designated with random effects (",
+                       paste(norandom, collapse=", "),
+                       ") have zero empirical variance."))
       }
       #----------------------------------------------------------------------------#
       # trimming step based on the chi-square type statistics                      #
@@ -227,7 +236,7 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
       ### 10/11/2018 new added parts
       initialfit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc, independent = independent)
       B_cov = lapply(1:m, function(i) vc + var.epsilon * xx[[i]])
-      B_cov_inv_half = lapply(1:m, function(i) {eig = eigen(solve(B_cov[[i]])); eig$vectors %*% sqrt((eig$values)) %*% t(eig$vectors)})
+      B_cov_inv_half = lapply(1:m, function(i) {eig = eigen(rsolve(B_cov[[i]])); eig$vectors %*% sqrt((eig$values)) %*% t(eig$vectors)})
       Norm_B = lapply(1:m, function(i) ols[i, ] %*% B_cov_inv_half[[i]])
       Norm_B = do.call(rbind,Norm_B)
 

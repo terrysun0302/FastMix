@@ -1,4 +1,21 @@
 ## misc useful functions
+
+## a robust matrix inverse function. Here min.cond.num refers to the
+## threshold of the minimum condition number of X
+rsolve <- function(X, min.cond.num=1e-6){
+  o <- svd(X)
+  ## replace smaller singular values with min.cond.num * the largest
+  ## singular value of X
+  dd <- pmax(o$d, min.cond.num*max(o$d))
+  ## below are some tricks to ensure rsolve() works for 1x1 matrix (a number).
+  if(length(dd)==1){
+    dd.inv <- 1/dd
+  } else {
+    dd.inv <- diag(1/dd)
+  }
+  return(o$v %*% dd.inv %*% t(o$u))
+}
+
 data_gen <- function(m, n, seed = 1, outlier = T, cor = 0, balance = T){
   ## generate some new simulated data
   n <- n
