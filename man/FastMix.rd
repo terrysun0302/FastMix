@@ -9,7 +9,7 @@
 A wrapper for the main function \code{ols.eblup.trim()} to conduct deconvolution gene expression analysis with matching cell proportions.
 }
 \usage{
-FastMix(GeneExp, CellProp, Demo, random="all", ...)
+FastMix(GeneExp, CellProp, Demo, random="all", include.demo=TRUE, ...)
 }
 \arguments{
   \item{GeneExp}{
@@ -25,6 +25,10 @@ requires random effects -- by default, \code{random="all"}, which means that all
   \item{Demo}{
   \code{Demo} is a n by p dimensional matrix of clinical and demographic
 variables to be tested, where p is the number of covariates. 
+  }
+  \item{include.demo}{
+   Whether the demographical covariates should be
+included as the main effects in the model or not. Default to TRUE.
   }
   \item{...}{Additional parameters passed to \code{ols.eblup.trim()}. It
 includes the following useful options

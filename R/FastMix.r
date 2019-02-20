@@ -305,12 +305,12 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
 
 
 ########## the main wrapper for deconvolution problem ##########
-FastMix <- function(GeneExp, CellProp, Demo, random="all", ...){
+FastMix <- function(GeneExp, CellProp, Demo, random="all", include.demo=TRUE, ...){
   gnames <- rownames(GeneExp); m <- nrow(GeneExp)
   if (is.null(gnames)) {
     rownames(GeneExp) <- gnames <- paste0("Gene", 1:m)
   }
-  Data2 <- DataPrep(GeneExp, CellProp, Demo)
+  Data2 <- DataPrep(GeneExp, CellProp, Demo, include.demo=include.demo)
   # L <- ncol(Data2$X)-1
   # if (random=="all") random <- 1:L
   mod <- ols.eblup.trim(Des=Data2$X, Y=Data2$Y, random=random, ...)

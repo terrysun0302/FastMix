@@ -104,7 +104,7 @@ robust.cov.est <- function(bmat, var.epsilon, xx, m, robust){
 }
 
 ## A convenience function to generate the combined covariate matrix
-DataPrep <- function(GeneExp, CellProp, Demo){
+DataPrep <- function(GeneExp, CellProp, Demo, include.demo=TRUE){
   m <- nrow(GeneExp); n <- nrow(Demo)
   ## assign gene names if empty
   if (is.null(rownames(GeneExp))) rownames(GeneExp) <- paste0("Gene", 1:m)
@@ -126,7 +126,14 @@ DataPrep <- function(GeneExp, CellProp, Demo){
     CellProp[,k] * Demo0[,p]
   }); colnames(Crossterms) <- rownames(Crossterms.idx)
   ## combine all variables
-  X0 <- cbind(CellProp, Demo0, Crossterms)
+  if (include.demo==TRUE){
+    X0 <- cbind(CellProp, Demo0, Crossterms)
+  } else {
+    X0 <- cbind(CellProp, Crossterms)
+  }
+  ## check the SVD and provide some warning messages
+  ss <- svd(X0)$d
+  if (min(ss)<1e-7) stop("The design matrix is numerically singular. Please consider: (a) include less cell types in the model, or (b) use 'include.demo=FALSE' to exclude the main effects of demographic covariates from the model.")
   ## create the long table for all covariates
   X <- cbind("ID"=rep(1:m, each=n),
              do.call(rbind, replicate(m,X0,simplify=FALSE)))
