@@ -1,7 +1,7 @@
 Package: FastMix
 Type: Package
 Title: An OLS-based approach for fitting LMER with applications to gene expression deconvolution analysis
-Version: 0.2.2
+Version: 0.2.3
 Author: Hao Sun, Xing Qiu
 Maintainer: Hao Sun <terrysun0302@gmail.com>
 Description: This package implements a computationally efficient method for fitting linear mixed model. It is based on the OLS fitting and moment-matching and is 30 ~ 60 times faster than the standard LMER fitting algorithm (e.g., \code{lme4}. One application of this method is to combine the gene expression deconvolution analysis and downstream differential expression analysis into one step.  To this end, we include a hypothesis testing framework to identity significant interactions between the clinical variables, gene expressions, and cell types.
