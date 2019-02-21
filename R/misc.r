@@ -6,7 +6,8 @@ rsolve <- function(X, min.cond.num=1e-6){
   o <- svd(X)
   ## replace smaller singular values with min.cond.num * the largest
   ## singular value of X
-  dd <- pmax(o$d, min.cond.num*max(o$d))
+  lambda <- min.cond.num*max(o$d)
+  dd <- pmax(o$d, lambda)
   ## below are some tricks to ensure rsolve() works for 1x1 matrix (a number).
   if(length(dd)==1){
     dd.inv <- 1/dd
@@ -15,6 +16,25 @@ rsolve <- function(X, min.cond.num=1e-6){
   }
   return(o$v %*% dd.inv %*% t(o$u))
 }
+
+## a robust version of half inverse of a *symmetric, semi-definite* matrix
+rhalfinv <- function(X, min.cond.num=1e-6) {
+  X <- as.matrix(X)
+  ## make sure X is a squared matrix
+  if (nrow(X) != ncol(X)) stop("X must be a squared matrix!")
+  if (!isSymmetric(X, tol=1e-6)) stop("X must be a symmetric matrix!")
+  ## if X is a 1x1 matrix (number), just return sqrt(X)
+  if (all(dim(X)==c(1,1))) {
+    Xhalfinv <- 1/sqrt(pmax(X,0))
+  } else {
+    o <- svd(X); u <- o$u
+    lambda <- min.cond.num*max(o$d)
+    dd <- pmax(o$d, lambda)
+    Xhalfinv <- u %*% diag(1/sqrt(dd)) %*% t(u)
+  }
+  return(Xhalfinv)
+}
+
 
 data_gen <- function(m, n, seed = 1, outlier = T, cor = 0, balance = T){
   ## generate some new simulated data

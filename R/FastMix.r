@@ -85,12 +85,22 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
   m <- length(unique(Des[,1])) # the # of subjects
   ID <- sort(unique(Des[,1]))
   qprime <- m*p #the number of parameters
+  ## 02/21/2019. We need to assume that all subjects (genes) have
+  ## exact the same number of "time points" (arrays)
+  n <- N/m                              #number of arrays
 
   ###calculate the var.epsilon
   number <- dz %>% group_by(ID) %>% summarize(num = length(ID)) %>% rbind(c(0,0), .) %>% as.matrix #define the # of obs for each subject
   number <- cumsum(number[,2]) #idx for each subject
-  res <- lapply(1:m, function(i) sum(lm.fit(x = Des[(number[i]+1):(number[i+1]),-1], y = Y[(number[i]+1):(number[i+1])])$residuals^2))
-  var.epsilon <- sum(unlist(res)) / (N - qprime) #sigma.e
+
+############################################################
+## 02/21/2019. Use median-based estimator for var.epsilon
+############################################################
+  res <- sapply(1:m, function(i) sum(lm.fit(x = Des[(number[i]+1):(number[i+1]),-1], y = Y[(number[i]+1):(number[i+1])])$residuals^2))
+  var.epsilon <- median(res) / ((n-p)*(1-2/(9*(n-p)))^3)
+
+  ## res <- sapply(1:m, function(i) lm.fit(x = Des[(number[i]+1):(number[i+1]),-1], y = Y[(number[i]+1):(number[i+1])])$residuals)
+  ## var.epsilon <- (IQR(as.numeric(rr1)) / 1.34896)^2
 
   ####################################### calculate the OLS-based covariance matrix#################################################
   coef.fix <- lm.fit(Des[,-1],Y)$coeff
@@ -143,7 +153,8 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
       ### 10/11/2018 new added parts
       initialfit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc, independent = independent, trim.idx = trim.idx)
       B_cov = lapply(1:m, function(i) vc + var.epsilon * xx[[i]])
-      B_cov_inv_half = lapply(1:m, function(i) {eig = eigen(rsolve(B_cov[[i]])); eig$vectors %*% sqrt(diag(eig$values)) %*% t(eig$vectors)})
+      ## B_cov_inv_half = lapply(1:m, function(i) {eig = eigen(rsolve(B_cov[[i]])); eig$vectors %*% sqrt(diag(eig$values)) %*% t(eig$vectors)})
+      B_cov_inv_half = lapply(B_cov, rhalfinv)
       Norm_B = lapply(1:m, function(i) ols[i, ] %*% B_cov_inv_half[[i]])
       Norm_B = do.call(rbind,Norm_B)
 
