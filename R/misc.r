@@ -193,13 +193,13 @@ hy.ols.blup.wrapper <- function(Des, Y, var.epsilon, number, random = random, vc
     lambda.hat <- 1/var.epsilon
     ########## estimation of the covariance matrix and the vakue of beta
     ZZ <- lapply(1:m, function(i) sum(DZ.prime[(number[i]+1):(number[i+1])]^2) )
-    cap <-  lapply(1:m, function(i) {solve(diag(length(random)) + lambda.hat * ZZ[[i]])})
+    cap <-  lapply(1:m, function(i) {rsolve(diag(length(random)) + lambda.hat * ZZ[[i]])})
     XZ <-  lapply(1:m, function(i) t(Des[(number[i]+1):(number[i+1]),-1]) %*%  DZ.prime[(number[i]+1):(number[i+1])])
     XX <-  lapply(1:m, function(i) {t(Des[(number[i]+1):(number[i+1]),-1]) %*% Des[(number[i]+1):(number[i+1]),-1]})
 
     if(is.null(trim.idx)){
       sigmabeta_i <-  lapply((1:m), function(i) {XX[[i]] - lambda.hat * XZ[[i]] %*% cap[[i]] %*% t(XZ[[i]])})
-      sigmabeta <- var.epsilon * solve(Reduce("+", sigmabeta_i))
+      sigmabeta <- var.epsilon * rsolve(Reduce("+", sigmabeta_i))
 
       ZY <- lapply(1:m, function(i) t(DZ.prime[(number[i]+1):(number[i+1])]) %*% Y[(number[i]+1):(number[i+1])])
       XY <-  lapply(1:m, function(i) t(Des[(number[i]+1):(number[i+1]), -1]) %*% Y[(number[i]+1):(number[i+1])])
@@ -212,7 +212,7 @@ hy.ols.blup.wrapper <- function(Des, Y, var.epsilon, number, random = random, vc
     }
     else{
       sigmabeta_i <-  lapply((1:m)[trim.idx], function(i) {XX[[i]] - lambda.hat * XZ[[i]] %*% cap[[i]] %*% t(XZ[[i]])})
-      sigmabeta <- var.epsilon * solve(Reduce("+", sigmabeta_i))
+      sigmabeta <- var.epsilon * rsolve(Reduce("+", sigmabeta_i))
 
       ZY <- lapply(1:m, function(i) t(DZ.prime[(number[i]+1):(number[i+1])]) %*% Y[(number[i]+1):(number[i+1])])
       XY <-  lapply(1:m, function(i) t(Des[(number[i]+1):(number[i+1]), -1]) %*% Y[(number[i]+1):(number[i+1])])
@@ -234,12 +234,12 @@ hy.ols.blup.wrapper <- function(Des, Y, var.epsilon, number, random = random, vc
     ################################################################################################
     ################## DEFINE SOME USEFUL QUANTITIES TO COMPUTE THE VARIANCE OF EBLUP ##############
     ################################################################################################
-    yvar <- lapply(1:m, function(i) solve(ZZ[[i]] + diag(var.epsilon, length(random))))
+    yvar <- lapply(1:m, function(i) rsolve(ZZ[[i]] + diag(var.epsilon, length(random))))
     #beta.inverse <- lapply(1:m, function(i) yvar[[i]] %*% ZZ[[i]])
     #beta.inverse <- lapply(1:m, function(i) yvar[[i]] %*% XX[[i]])
     #beta.inverse2 <- lapply(1:m, function(i) yvar[[i]] %*% ZZ[[i]])
     ############# this is actually another way tp compute sigmabeta at line 88 #####################
-    #varbeta <- solve(solve(A) %*% Reduce("+", beta.inverse) %*% solve(A))
+    #varbeta <- rsolve(rsolve(A) %*% Reduce("+", beta.inverse) %*% rsolve(A))
 
     var.part1 <- lapply(1:m, function(i) A %*%  ZZ[[i]] %*% yvar[[i]] %*% A)
     var.part2 <- lapply(1:m, function(i) A %*% yvar[[i]] %*% t(XZ[[i]]) %*% sigmabeta %*%
@@ -253,13 +253,13 @@ hy.ols.blup.wrapper <- function(Des, Y, var.epsilon, number, random = random, vc
 
     ######################## refit the B matrix  ####################################################
     ######################## the eblup values #######################################################
-    eta.stat <- unlist(lapply(1:m, function(i) {t(blup[i,]) %*% solve(var.eblup[[i]]) %*% blup[i,]}))
+    eta.stat <- unlist(lapply(1:m, function(i) {t(blup[i,]) %*% rsolve(var.eblup[[i]]) %*% blup[i,]}))
 
     # ### recover the covariance matrix
     # eta.stat3 <- lapply(1:m, function(i) {a = eigen(solve(var2.eblup[[i]])); solve(A) %*% a$vectors %*% diag(sqrt(a$values)) %*% t(a$vectors) %*% blup[i,]})
     # eta.stat3 <- t(do.call("cbind",eta.stat3))
     #
-    eta.stat2 <- lapply(1:m, function(i) {a = eigen(solve(var.eblup[[i]])); a$vectors * sqrt(a$values) * t(a$vectors) * blup[i,]})
+    eta.stat2 <- lapply(1:m, function(i) {a = eigen(rsolve(var.eblup[[i]])); a$vectors * sqrt(a$values) * t(a$vectors) * blup[i,]})
     eta.stat2 <- t(do.call("cbind",eta.stat2))
 
     eta.stat3 <- lapply(1:m, function(i) {1/sqrt(diag(var.eblup[[i]])) * blup[i,]})
@@ -279,8 +279,8 @@ hy.ols.blup.wrapper <- function(Des, Y, var.epsilon, number, random = random, vc
     if(independent == F){
       a <- eigen(vc)
       a$values <- pmax(a$values, var.epsilon/100)
-      A <- (a$vectors %*% diag(sqrt(a$values)) %*% solve(a$vectors))
-      vc.hat <- (a$vectors %*% diag(a$values) %*% solve(a$vectors))
+      A <- (a$vectors %*% diag(sqrt(a$values)) %*% rsolve(a$vectors))
+      vc.hat <- (a$vectors %*% diag(a$values) %*% rsolve(a$vectors))
 
       Des.prime <- Des[,c(1+random)] %*% A # transformt the design matrix
       DZ.prime <- Des.prime
@@ -299,13 +299,13 @@ hy.ols.blup.wrapper <- function(Des, Y, var.epsilon, number, random = random, vc
 
   ########## estimation of the covariance matrix and the vakue of beta
   ZZ <- lapply(1:m, function(i) t(DZ.prime[(number[i]+1):(number[i+1]),]) %*% DZ.prime[(number[i]+1):(number[i+1]),] )
-  cap <-  lapply(1:m, function(i) {solve(diag(length(random)) + lambda.hat * ZZ[[i]])})
+  cap <-  lapply(1:m, function(i) {rsolve(diag(length(random)) + lambda.hat * ZZ[[i]])})
   XZ <-  lapply(1:m, function(i) t(Des[(number[i]+1):(number[i+1]),-1]) %*%  DZ.prime[(number[i]+1):(number[i+1]),])
   XX <-  lapply(1:m, function(i) {t(Des[(number[i]+1):(number[i+1]),-1]) %*% Des[(number[i]+1):(number[i+1]),-1]})
 
   if(is.null(trim.idx)){
     sigmabeta_i <-  lapply((1:m), function(i) {XX[[i]] - lambda.hat * XZ[[i]] %*% cap[[i]] %*% t(XZ[[i]])})
-    sigmabeta <- var.epsilon * solve(Reduce("+", sigmabeta_i))
+    sigmabeta <- var.epsilon * rsolve(Reduce("+", sigmabeta_i))
 
     ZY <- lapply(1:m, function(i) t(DZ.prime[(number[i]+1):(number[i+1]),]) %*% Y[(number[i]+1):(number[i+1])])
     XY <-  lapply(1:m, function(i) t(Des[(number[i]+1):(number[i+1]), -1]) %*% Y[(number[i]+1):(number[i+1])])
@@ -318,7 +318,7 @@ hy.ols.blup.wrapper <- function(Des, Y, var.epsilon, number, random = random, vc
   }
   else{
     sigmabeta_i <-  lapply((1:m)[trim.idx], function(i) {XX[[i]] - lambda.hat * XZ[[i]] %*% cap[[i]] %*% t(XZ[[i]])})
-    sigmabeta <- var.epsilon * solve(Reduce("+", sigmabeta_i))
+    sigmabeta <- var.epsilon * rsolve(Reduce("+", sigmabeta_i))
 
     ZY <- lapply(1:m, function(i) t(DZ.prime[(number[i]+1):(number[i+1]),]) %*% Y[(number[i]+1):(number[i+1])])
     XY <-  lapply(1:m, function(i) t(Des[(number[i]+1):(number[i+1]), -1]) %*% Y[(number[i]+1):(number[i+1])])
@@ -341,12 +341,12 @@ hy.ols.blup.wrapper <- function(Des, Y, var.epsilon, number, random = random, vc
   ################################################################################################
   ################## DEFINE SOME USEFUL QUANTITIES TO COMPUTE THE VARIANCE OF EBLUP ##############
   ################################################################################################
-  yvar <- lapply(1:m, function(i) solve(ZZ[[i]] + diag(var.epsilon, length(random))))
+  yvar <- lapply(1:m, function(i) rsolve(ZZ[[i]] + diag(var.epsilon, length(random))))
   #beta.inverse <- lapply(1:m, function(i) yvar[[i]] %*% ZZ[[i]])
   #beta.inverse <- lapply(1:m, function(i) yvar[[i]] %*% XX[[i]])
   #beta.inverse2 <- lapply(1:m, function(i) yvar[[i]] %*% ZZ[[i]])
   ############# this is actually another way tp compute sigmabeta at line 88 #####################
-  #varbeta <- solve(solve(A) %*% Reduce("+", beta.inverse) %*% solve(A))
+  #varbeta <- rsolve(rsolve(A) %*% Reduce("+", beta.inverse) %*% rsolve(A))
 
   var.part1 <- lapply(1:m, function(i) A %*%  ZZ[[i]] %*% yvar[[i]] %*% A)
   var.part2 <- lapply(1:m, function(i) A %*% yvar[[i]] %*% t(XZ[[i]]) %*% sigmabeta %*%
@@ -360,13 +360,13 @@ hy.ols.blup.wrapper <- function(Des, Y, var.epsilon, number, random = random, vc
 
   ######################## refit the B matrix  ####################################################
   ######################## the eblup values #######################################################
-  eta.stat <- unlist(lapply(1:m, function(i) {t(blup[i,]) %*% solve(var.eblup[[i]]) %*% blup[i,]}))
+  eta.stat <- unlist(lapply(1:m, function(i) {t(blup[i,]) %*% rsolve(var.eblup[[i]]) %*% blup[i,]}))
 
   # ### recover the covariance matrix
-  # eta.stat3 <- lapply(1:m, function(i) {a = eigen(solve(var2.eblup[[i]])); solve(A) %*% a$vectors %*% diag(sqrt(a$values)) %*% t(a$vectors) %*% blup[i,]})
+  # eta.stat3 <- lapply(1:m, function(i) {a = eigen(rsolve(var2.eblup[[i]])); rsolve(A) %*% a$vectors %*% diag(sqrt(a$values)) %*% t(a$vectors) %*% blup[i,]})
   # eta.stat3 <- t(do.call("cbind",eta.stat3))
   #
-  eta.stat2 <- lapply(1:m, function(i) {a = eigen(solve(var.eblup[[i]])); a$vectors %*% diag(sqrt(a$values)) %*% t(a$vectors) %*% blup[i,]})
+  eta.stat2 <- lapply(1:m, function(i) {a = eigen(rsolve(var.eblup[[i]])); a$vectors %*% diag(sqrt(a$values)) %*% t(a$vectors) %*% blup[i,]})
   eta.stat2 <- t(do.call("cbind",eta.stat2))
 
   eta.stat3 <- lapply(1:m, function(i) {1/sqrt(diag(var.eblup[[i]])) * blup[i,]})
