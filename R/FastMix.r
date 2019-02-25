@@ -66,7 +66,7 @@
 ################################ the function of proposed method #######################################
 ########################################################################################################
 
-ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, robust = "FastMix", test = 1, trim.fix = TRUE){
+ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, robust = "FastMix", test = 1, trim.fix = TRUE, min.cond.num=1e-6) {
   N <- length(Y) # number of total observations
   ## Exclude the first column, ID, because it is just a label
   covariates <- colnames(Des)[-1]; p <- length(covariates)
@@ -111,16 +111,14 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
   ols <- do.call(rbind, ols)
   ## covbeta <- cov(ols)
 
-  xx <- lapply(1:m, function(i) rsolve(t(Des[(number[i]+1):(number[i+1]),(1 +random)]) %*% Des[(number[i]+1):(number[i+1]),(1 +random)]))
+  xx <- lapply(1:m, function(i) rsolve(crossprod(Des[(number[i]+1):(number[i+1]),(1 +random)]), min.cond.num=min.cond.num))
   XX <- Reduce("+", xx)
   coef_vector = rep(1, length(random))
 
   ### the case without robust estimation
   norm_idx = c()
   p_random = length(random)
-
   trim.idx = NULL
-
   if(p_random > 1){ # when the number of random effects is larger than 1
     if(robust == FALSE) {
       vc.refit <- .cov.est(ols, var.epsilon, XX, m, coef = coef_vector)
@@ -151,14 +149,15 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
       #----------------------------------------------------------------------------#
 
       ### 10/11/2018 new added parts
-      initialfit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc, independent = independent, trim.idx = trim.idx)
+      initialfit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc, independent = independent, trim.idx = trim.idx, min.cond.num=min.cond.num)
       B_cov = lapply(1:m, function(i) vc + var.epsilon * xx[[i]])
       ## B_cov_inv_half = lapply(1:m, function(i) {eig = eigen(rsolve(B_cov[[i]])); eig$vectors %*% sqrt(diag(eig$values)) %*% t(eig$vectors)})
-      B_cov_inv_half = lapply(B_cov, rhalfinv)
+      B_cov_inv_half = lapply(B_cov, function(x) rhalfinv(x, min.cond.num=min.cond.num))
       Norm_B = lapply(1:m, function(i) ols[i, ] %*% B_cov_inv_half[[i]])
       Norm_B = do.call(rbind,Norm_B)
 
-      ### 1/20/2019  used to do test : test 1: gaussian mixed model test; test 2: anderson darling test
+      ### 1/20/2019 used to do test : test 1: gaussian mixed model
+      ### test; test 2: anderson darling test
       if(test == 1){
         #norm_test = apply(initialfit$eta.stat2,2,function(x) shapiro.test(x)$p)
         norm_test = apply(initialfit$eta.stat3[,diag(vc) > 0],2,function(a)
@@ -166,8 +165,7 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
         norm_idx = rep(NA, p_random)
         norm_idx[diag(vc) > 0] = norm_test > 1
         norm_idx[diag(vc) <= 0] = 0
-      }
-      else{
+      } else {                          #Anderson-Darling
         #norm_test = apply(initialfit$eta.stat3,2,function(x) shapiro.test(x)$p): this test has sample size limitation
         norm_test = apply(initialfit$eta.stat3,2,function(x) ad.test(x)$p) #: this test has sample size limitation
         norm_idx = (norm_test < 0.05) & (diag(vc) > 0)
@@ -204,9 +202,9 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
 
     ### the option for fix effect
     if(trim.fix == FALSE){
-      refit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc.refit, independent = independent, trim.idx = NULL)
+      refit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc.refit, independent = independent, trim.idx = NULL, min.cond.num=min.cond.num)
     } else {
-      refit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc.refit, independent = independent, trim.idx = trim.idx)
+      refit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc.refit, independent = independent, trim.idx = trim.idx, min.cond.num=min.cond.num)
     }
     re.pvalue <- 1 - pchisq(refit$eta.stat, df = p_random)
 
@@ -245,9 +243,11 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
       #----------------------------------------------------------------------------#
 
       ### 10/11/2018 new added parts
-      initialfit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc, independent = independent)
+      initialfit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc, independent = independent, min.cond.num=min.cond.num)
       B_cov = lapply(1:m, function(i) vc + var.epsilon * xx[[i]])
-      B_cov_inv_half = lapply(1:m, function(i) {eig = eigen(rsolve(B_cov[[i]])); eig$vectors %*% sqrt((eig$values)) %*% t(eig$vectors)})
+      ## B_cov_inv_half = lapply(1:m, function(i) {eig = eigen(rsolve(B_cov[[i]])); eig$vectors %*% sqrt((eig$values)) %*% t(eig$vectors)})
+      B_cov_inv_half = lapply(B_cov, rhalfinv)
+
       Norm_B = lapply(1:m, function(i) ols[i, ] %*% B_cov_inv_half[[i]])
       Norm_B = do.call(rbind,Norm_B)
 
@@ -283,17 +283,16 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
 
     ### the option for fix effect
     if(trim.fix == FALSE){
-      refit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc.refit, independent = independent)
+      refit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc.refit, independent = independent, min.cond.num=min.cond.num)
     }
 
     else if(trim.fix == TRUE){
-      refit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc.refit, independent = independent, trim.idx = trim.idx)
+      refit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc.refit, independent = independent, trim.idx = trim.idx, min.cond.num=min.cond.num)
     }
     re.pvalue <- 1 - pchisq(refit$eta.stat, df = p_random)
     re.ind.pvalue <- 2*(1 - pnorm(abs(refit$eta.stat2)))
     colnames(re.ind.pvalue) <- covariates[random]
   }
-
 
   #----------------------------------------------------------------------------#
   # the calculation of final outputs                                           #
@@ -316,9 +315,11 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
   fixed.p.adj <- p.adjust(fixed.p, method="BH")
   fixed.results <- cbind(betahat=drop(refit$betahat), tstat=t.fixed,
                          p.value=fixed.p, p.adj=fixed.p.adj)
+  rownames(fixed.results) <- colnames(Des)[-1]
 
   list(fixed.results=fixed.results, beta.mat=betamat, Yhat=Yhat,
        sigma.beta=refit$sigmabeta, VC=VC, cov = refit$cov,
+       var.epsilon=var.epsilon, var.eblup=refit$var.eblup,
        re.pvalue = re.pvalue, eta = refit$eta.stat,
        re.ind.pvalue=re.ind.pvalue, out_idx = norm_idx)
 }
