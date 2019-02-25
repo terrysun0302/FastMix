@@ -291,7 +291,10 @@ hy.ols.blup.wrapper <- function(Des, Y, var.epsilon, number, random = random, vc
   ## the covariance estimation
   cov = vc.hat*var.epsilon * lambda.hat
   rownames(cov) <- colnames(cov) <- colnames(Des)[-1][random]
+  ## also output var.eblup.mean for debugging purposes
+  var.eblup.mean <- Reduce("+", var.eblup)/length(var.eblup)
   return(list(eta.stat = eta.stat, eta.stat2 = eta.stat2, eta.stat3 = eta.stat3,
-              eta.test = eta.test, blup = blup, betahat = betahat, var.eblup=var.eblup[[1]],
-              sigmabeta = sigmabeta, cov = cov, lambda.hat = lambda.hat))
+              eta.test = eta.test, blup = blup, betahat = betahat,
+              var.eblup.mean=var.eblup.mean, sigmabeta = sigmabeta,
+              cov = cov, lambda.hat = lambda.hat))
 }

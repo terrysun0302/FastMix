@@ -319,7 +319,7 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
 
   list(fixed.results=fixed.results, beta.mat=betamat, Yhat=Yhat,
        sigma.beta=refit$sigmabeta, VC=VC, cov = refit$cov,
-       var.epsilon=var.epsilon, var.eblup=refit$var.eblup,
+       var.epsilon=var.epsilon, var.eblup.mean=refit$var.eblup.mean,
        re.pvalue = re.pvalue, eta = refit$eta.stat,
        re.ind.pvalue=re.ind.pvalue, out_idx = norm_idx)
 }
