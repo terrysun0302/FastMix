@@ -70,6 +70,12 @@ overall effects shared by all genes.}
 \item{GeneExp.fitted }{fitted gene expressions.}
 \item{sigma.beta}{the estimated covariance matrix of the fixed effects.}
 \item{VC }{variance component estimation. The first column is the one for common random error. The second column is the one for random effects.}
+\item{cov}{???}
+\item{var.epsilon}{the variance of the i.i.d. noise.}
+\item{var.eblup.mean}{the average of the variance of gamma.hat based on
+the EBLUP estimator. Note that in general, each gamma.hat.i has its own
+covariance matrix; so \code{var.eblup.mean} is provided only as a rough
+debugging tool.}
 \item{eta}{the chi-square type statsitics used for p-value calculation.}
 \item{re.pvalue}{the overall p-value for detecting outliers in random effects.}
 \item{re.ind.pvalue}{the individual p-value for outlier detection for each random effect.}
