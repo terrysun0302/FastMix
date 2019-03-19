@@ -160,8 +160,8 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
       ### test; test 2: anderson darling test
       if(test == 1){
         #norm_test = apply(initialfit$eta.stat2,2,function(x) shapiro.test(x)$p)
-        norm_test = apply(initialfit$eta.stat3[,diag(vc) > 0],2,function(a)
-          summary(Mclust(a, x = mclustBIC(a, verbose = F), verbose = F), parameters = TRUE)$G)
+        # ## summary(Mclust(a, x = mclustBIC(a, verbose = F), verbose = F), parameters = TRUE)$G
+        norm_test = apply(initialfit$eta.stat3[,diag(vc) > 0],2,function(a) mclustModel(a, mclustBIC(a, G=1:3, modelNames="V", verbose=F))$G )
         norm_idx = rep(NA, p_random)
         norm_idx[diag(vc) > 0] = norm_test > 1
         norm_idx[diag(vc) <= 0] = 0
@@ -254,7 +254,8 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
       ### 1/20/2019  used to do test : test 1: gaussian mixed model test; test 2: anderson darling test
       if(test == 1){
         #norm_test = apply(initialfit$eta.stat2,2,function(x) shapiro.test(x)$p)
-        norm_test = apply(initialfit$eta.stat3,2,function(a) summary(Mclust(a, x = mclustBIC(a, verbose = F), verbose = F), parameters = TRUE)$G)
+        #norm_test = apply(initialfit$eta.stat3,2,function(a) summary(Mclust(a, x = mclustBIC(a, verbose = F), verbose = F), parameters = TRUE)$G)
+        norm_test = apply(initialfit$eta.stat3[,diag(vc) > 0],2,function(a) mclustModel(a, mclustBIC(a, G=1:3, modelNames="V", verbose=F))$G )
         norm_idx = norm_test > 1
       }
       else{
