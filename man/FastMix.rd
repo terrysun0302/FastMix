@@ -24,7 +24,7 @@ requires random effects -- by default, \code{random="all"}, which means that all
   }
   \item{Demo}{
   \code{Demo} is a n by p dimensional matrix of clinical and demographic
-variables to be tested, where p is the number of covariates. 
+variables to be tested, where p is the number of covariates.
   }
   \item{include.demo}{
    Whether the demographical covariates should be
@@ -46,7 +46,7 @@ value is TRUE, which means that all random effects are assumed to be independent
 Anderson-darling normal test. Default value is "1".
   }
   \item{robust: }{\code{robust} specifies whether robust covariance
-estimation is implemented and 
+estimation is implemented and
 which method to use:  "FALSE" for non-robust estimation; "mcd" for the
 MCD algorithm of Rousseeuw and Van Driessen; "weighted" for the
 Reweighted MCD; "donostah" for the Donoho-Stahel projection based
@@ -56,7 +56,11 @@ pairwise estimator. All these algorithms come from the R package
   }
    \item{trim.fix: }{
   Whether only consider trimmed subjects in fix effect estiamtion. The default value is FALSE.
-  }}}
+  }
+  \item{weight_matrix: }{
+  The pre-specified weight structure among subjects.
+  }
+  }}
 }
 \details{
 %%  ~~ If necessary, more details than the description above ~~

@@ -32,7 +32,8 @@
 #                 is Anderson-darling normal test. The default value is "1"    #
 #                                                                              #
 #  trim.fix       If only consider trimmed subjects in fix effect estiamtion.  #
-#                                                                              #
+#  bias           the bias-correction step. default is "2".                    #
+#==============================================================================#
 #  Outputs                                                                     #
 #                                                                              #
 #  Returns a list                                                              #
@@ -66,7 +67,8 @@
 ################################ the function of proposed method #######################################
 ########################################################################################################
 
-ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, robust = "FastMix", test = 1, trim.fix = TRUE, min.cond.num=1e-6) {
+ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, robust = "FastMix", test = 1, trim.fix = TRUE, min.cond.num=1e-6,
+                           bias = 2) {
   N <- length(Y) # number of total observations
   ## Exclude the first column, ID, because it is just a label
   covariates <- colnames(Des)[-1]; p <- length(covariates)
@@ -79,9 +81,11 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
   dz <- as.data.frame(DZ) #a data.frame used for some particular functions
 
   colnames(dz)[1] <- "ID"
-  #----------------------------------------------------------------------------#
-  # ols based step to initially calculate the covariance of random effects     #
-  #----------------------------------------------------------------------------#
+
+
+  #========================================================================================#
+  #============ step 1: initial estimation of fix effect and B matrix =====================#
+  #========================================================================================#
   m <- length(unique(Des[,1])) # the # of subjects
   ID <- sort(unique(Des[,1]))
   qprime <- m*p #the number of parameters
@@ -93,33 +97,29 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
   number <- dz %>% group_by(ID) %>% summarize(num = length(ID)) %>% rbind(c(0,0), .) %>% as.matrix #define the # of obs for each subject
   number <- cumsum(number[,2]) #idx for each subject
 
-############################################################
-## 02/21/2019. Use median-based estimator for var.epsilon
-############################################################
+  ### here, we use a median-based estimator for var.epsilon
   res <- sapply(1:m, function(i) sum(lm.fit(x = Des[(number[i]+1):(number[i+1]),-1], y = Y[(number[i]+1):(number[i+1])])$residuals^2))
   var.epsilon <- median(res) / ((n-p)*(1-2/(9*(n-p)))^3)
 
-  ## res <- sapply(1:m, function(i) lm.fit(x = Des[(number[i]+1):(number[i+1]),-1], y = Y[(number[i]+1):(number[i+1])])$residuals)
-  ## var.epsilon <- (IQR(as.numeric(rr1)) / 1.34896)^2
-
-  ####################################### calculate the OLS-based covariance matrix#################################################
+  ### fix effect estimation
   coef.fix <- lm.fit(Des[,-1],Y)$coeff
   ### Y - fixed effect
   new.Y <- Y - Des[,-1] %*% coef.fix
-  ### estimate variance of random effects
+  ### ols-based random effects estimation
   ols <- lapply(1:m, function(i) lm.fit(as.matrix(Des[(number[i]+1):(number[i+1]),(1 +random)]), y = new.Y[(number[i]+1):(number[i+1])])$coeff)
   ols <- do.call(rbind, ols)
-  ## covbeta <- cov(ols)
 
   xx <- lapply(1:m, function(i) rsolve(crossprod(Des[(number[i]+1):(number[i+1]),(1 +random)]), min.cond.num=min.cond.num))
   XX <- Reduce("+", xx)
   coef_vector = rep(1, length(random))
 
-  ### the case without robust estimation
   norm_idx = c()
   p_random = length(random)
   trim.idx = NULL
-  if(p_random > 1){ # when the number of random effects is larger than 1
+
+
+  ### when the number of random effects > 1
+  if(p_random > 1){
     if(robust == FALSE) {
       vc.refit <- .cov.est(ols, var.epsilon, XX, m, coef = coef_vector)
       norandom <- names(which(diag(vc.refit) <= 0))
@@ -135,8 +135,10 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
     else if(robust == "donostah") vc.refit <- robust.cov.est(ols, var.epsilon, XX, m, robust)
     else if(robust == "pairwiseQC") vc.refit <- robust.cov.est(ols, var.epsilon, XX, m, robust)
 
-    ### porposed robust estimation
+    ### proposed robust estimation
     else if(robust == "FastMix") {
+
+      ### intial B estimation
       vc <- .cov.est(ols, var.epsilon, XX, m, coef = coef_vector)
       norandom <- names(which(diag(vc) <= 0))
       if(length(norandom) > 0){
@@ -144,20 +146,31 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
                        paste(norandom, collapse=", "),
                        ") have zero empirical variance."))
       }
-      #----------------------------------------------------------------------------#
-      # trimming step based on the chi-square type statistics                      #
-      #----------------------------------------------------------------------------#
 
-      ### 10/11/2018 new added parts
-      initialfit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc, independent = independent, trim.idx = trim.idx, min.cond.num=min.cond.num)
+
+
+      ### useful chi-square type stats in trimming step
       B_cov = lapply(1:m, function(i) vc + var.epsilon * xx[[i]])
       ## B_cov_inv_half = lapply(1:m, function(i) {eig = eigen(rsolve(B_cov[[i]])); eig$vectors %*% sqrt(diag(eig$values)) %*% t(eig$vectors)})
       B_cov_inv_half = lapply(B_cov, function(x) rhalfinv(x, min.cond.num=min.cond.num))
       Norm_B = lapply(1:m, function(i) ols[i, ] %*% B_cov_inv_half[[i]])
       Norm_B = do.call(rbind,Norm_B)
 
-      ### 1/20/2019 used to do test : test 1: gaussian mixed model
-      ### test; test 2: anderson darling test
+      ### bias_correction calculation based on intial random effects estimation
+      rr_ols = RobustMeanEst(ols, B_cov[[1]], tol=0.001, max.iter=10)
+      if(bias == 1 | bias == 2) bias_term = rr_ols$mu.est
+      else bias_term = rep(0, p_random)
+
+      #=================================================================================================================#
+      #============================= step 2: first stage WLS and EBLUP =================================================#
+      #=================================================================================================================#
+      initialfit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc, independent = independent,
+                                        trim.idx = trim.idx, min.cond.num=min.cond.num, bias_term = bias_term)
+
+      #=================================================================================================================#
+      #===================== step 3: trimming based re-estimation of B =================================================#
+      #=================================================================================================================#
+      ### DEGs detection
       if(test == 1){
         #norm_test = apply(initialfit$eta.stat2,2,function(x) shapiro.test(x)$p)
         # ## summary(Mclust(a, x = mclustBIC(a, verbose = F), verbose = F), parameters = TRUE)$G
@@ -170,8 +183,11 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
         norm_test = apply(initialfit$eta.stat3,2,function(x) ad.test(x)$p) #: this test has sample size limitation
         norm_idx = (norm_test < 0.05) & (diag(vc) > 0)
       }
+
+      ### the number of detected DEGs
       trimdf <- sum(norm_idx)
 
+      ###
       if(trimdf > 0){
         chi_stat = lapply(1:m, function(i) sum(Norm_B[i, norm_idx == T]^2))
         chi_stat = unlist(chi_stat)
@@ -191,20 +207,41 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
         coef_vector[norm_idx == T] = mult
         coef_vector[norm_idx == F] = 1
         vc.refit <- .cov.est(ols, var.epsilon, XX, m, coef = coef_vector)
+
+        ### here, when there is at least one selected direction, wedo bias-correctionin these directions.
+        B_cov_refit = lapply(1:m, function(i) vc.refit + var.epsilon * xx[[i]])
+        rr_ols = RobustMeanEst(ols, B_cov_refit[[1]], tol=0.001, max.iter=10)
+
+        v_inflation = 1
+        ### 04/15/2019: bias correction step
+        if(bias == 1) {
+          bias_term = rr_ols$mu.est
+          v_inflation = rr_ols$V.inflation
+        }
+        else if(bias == 2) {
+          bias_term = norm_idx * rr_ols$mu.est
+          v_inflation = rep(1, p_random)
+          v_inflation[norm_idx !=0] = rr_ols$V.inflation
+        }
+        else bias_term = rep(0, p_random)
+
       }
       else{
         vc.refit = vc
+        bias_term = rep(0, p_random)
+        v_inflation = 1
       }
-      # if(sum(diag(vc.refit) <= 0) > 0){
-      #   warning("Fitting problems caused by trimming. Please try a smaller trim coefficient.")
-      # }
     }
 
-    ### the option for fix effect
+    #======================================================================================================#
+    #=============================== step 4: re-estiamtion using WLS and EBLUP ============================#
+    #======================================================================================================#
     if(trim.fix == FALSE){
-      refit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc.refit, independent = independent, trim.idx = NULL, min.cond.num=min.cond.num)
+      refit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc.refit, independent = independent, trim.idx = NULL, min.cond.num=min.cond.num,
+                                   bias_term = bias_term)
     } else {
-      refit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc.refit, independent = independent, trim.idx = trim.idx, min.cond.num=min.cond.num)
+      refit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc.refit, independent = independent, trim.idx = trim.idx, min.cond.num=min.cond.num,
+                                   bias_term = bias_term)
     }
     re.pvalue <- 1 - pchisq(refit$eta.stat, df = p_random)
 
@@ -213,7 +250,11 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
     # else{re.ind.pvalue <- 2*(1 - pnorm(abs(refit$eta.stat3)))}
     colnames(re.ind.pvalue) <- covariates[random]
   }
+
+  ### the case when #of random effect is 1, e.g., random intecept model
   else{
+    bias_term = 0
+    v_inflation = 1
     if(robust == FALSE) {
       vc.refit <- .cov.est(ols, var.epsilon, XX, m, coef = coef_vector)
       norandom <- names(which(diag(vc.refit) <= 0))
@@ -241,9 +282,7 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
       #----------------------------------------------------------------------------#
       # trimming step based on the chi-square type statistics                      #
       #----------------------------------------------------------------------------#
-
       ### 10/11/2018 new added parts
-      initialfit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc, independent = independent, min.cond.num=min.cond.num)
       B_cov = lapply(1:m, function(i) vc + var.epsilon * xx[[i]])
       ## B_cov_inv_half = lapply(1:m, function(i) {eig = eigen(rsolve(B_cov[[i]])); eig$vectors %*% sqrt((eig$values)) %*% t(eig$vectors)})
       B_cov_inv_half = lapply(B_cov, rhalfinv)
@@ -251,18 +290,23 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
       Norm_B = lapply(1:m, function(i) ols[i, ] %*% B_cov_inv_half[[i]])
       Norm_B = do.call(rbind,Norm_B)
 
+      ### bias_correction calculation based on intial random effects estimation
+      rr_ols = RobustMeanEst(ols, B_cov[[1]], tol=0.001, max.iter=10)
+      if(bias == 1 | bias == 2) bias_term = rr_ols$mu.est
+      else bias_term = rep(0, p_random)
+
+      initialfit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc, independent = independent, min.cond.num=min.cond.num, bias_term = bias_term)
+
       ### 1/20/2019  used to do test : test 1: gaussian mixed model test; test 2: anderson darling test
-      if(test == 1){
-        #norm_test = apply(initialfit$eta.stat2,2,function(x) shapiro.test(x)$p)
-        #norm_test = apply(initialfit$eta.stat3,2,function(a) summary(Mclust(a, x = mclustBIC(a, verbose = F), verbose = F), parameters = TRUE)$G)
-        norm_test = apply(initialfit$eta.stat3[,diag(vc) > 0],2,function(a) mclustModel(a, mclustBIC(a, G=1:3, modelNames="V", verbose=F))$G )
-        norm_idx = norm_test > 1
+
+      #norm_test = apply(initialfit$eta.stat2,2,function(x) shapiro.test(x)$p)
+      #norm_test = apply(initialfit$eta.stat3,2,function(a) summary(Mclust(a, x = mclustBIC(a, verbose = F), verbose = F), parameters = TRUE)$G)
+      norm_test = 0
+      if(length(norandom) > 0){
+        norm_test = mclustModel(initialfit$eta.stat3, mclustBIC(initialfit$eta.stat3, G=1:3, modelNames="V", verbose=F))$G
       }
-      else{
-        #norm_test = apply(initialfit$eta.stat3,2,function(x) shapiro.test(x)$p): this test has sample size limitation
-        norm_test = apply(initialfit$eta.stat3,2,function(x) ad.test(x)$p) #: this test has sample size limitation
-        norm_idx = norm_test < 0.05
-      }
+      norm_idx = norm_test > 1
+
       trimdf <- sum(norm_idx)
 
       if(trimdf > 0){
@@ -276,6 +320,23 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
 
         coef_vector = c(mult)
         vc.refit <- .cov.est(ols, var.epsilon, XX, m, coef = coef_vector)
+
+        ### here, when there is at least one selected direction, wedo bias-correctionin these directions.
+        B_cov_refit = lapply(1:m, function(i) vc.refit + var.epsilon * xx[[i]])
+        rr_ols = RobustMeanEst(ols, B_cov_refit[[1]], tol=0.001, max.iter=10)
+
+        v_inflation = 1
+        ### 04/15/2019: bias correction step
+        if(bias == 1) {
+          bias_term = rr_ols$mu.est
+          v_inflation = rr_ols$V.inflation
+        }
+        else if(bias == 2) {
+          bias_term = norm_idx * rr_ols$mu.est
+          v_inflation = rep(1, p_random)
+          v_inflation[norm_idx !=0] = rr_ols$V.inflation
+        }
+        else bias_term = rep(0, p_random)
       }
       else{
         vc.refit = vc
@@ -284,11 +345,11 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
 
     ### the option for fix effect
     if(trim.fix == FALSE){
-      refit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc.refit, independent = independent, min.cond.num=min.cond.num)
+      refit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc.refit, independent = independent, min.cond.num=min.cond.num, bias_term = bias_term)
     }
 
     else if(trim.fix == TRUE){
-      refit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc.refit, independent = independent, trim.idx = trim.idx, min.cond.num=min.cond.num)
+      refit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc.refit, independent = independent, trim.idx = trim.idx, min.cond.num=min.cond.num, bias_term = bias_term)
     }
     re.pvalue <- 1 - pchisq(refit$eta.stat, df = p_random)
     re.ind.pvalue <- 2*(1 - pnorm(abs(refit$eta.stat2)))
@@ -302,6 +363,7 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
   colnames(betamat) <- colnames(Des)[-1]
   betamat[,random] <- refit$blup + betamat[,random]
   t.fixed <- drop(refit$betahat/sqrt(diag(as.matrix(refit$sigmabeta))))
+  t.fixed[random] <- t.fixed[random] / sqrt(v_inflation)
   vc.new <- sqrt(pmax(diag(vc.refit),0)*var.epsilon * refit$lambda.hat)
   VC <- data.frame(sqrt(var.epsilon), vc.new)
   Yhat <- lapply(1:m, function(i) Des[(number[i]+1):(number[i+1]), -1] %*% betamat[i,])
@@ -327,12 +389,26 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
 
 
 ########## the main wrapper for deconvolution problem ##########
-FastMix <- function(GeneExp, CellProp, Demo, random="all", include.demo=TRUE, ...){
+FastMix <- function(GeneExp, CellProp, Demo, random="all", include.demo=TRUE, weight_matrix = NULL, ...){
+
+  ### num. of subjects
+  n = ncol(GeneExp)
+
+  ### the weight step: with knwon weights among subjects. weight_matrix is n by n
+  if(is.null(weight_matrix)){
+    w = diag(rep(1, n))
+  }
+  else{
+    e = eigen(weight_matrix)
+    ### the weight matrix, e.g., WLS
+    w = e$vectors %*% sqrt(diag(1/e$values)) %*% t(e$vectors)
+  }
+
   gnames <- rownames(GeneExp); m <- nrow(GeneExp)
   if (is.null(gnames)) {
     rownames(GeneExp) <- gnames <- paste0("Gene", 1:m)
   }
-  Data2 <- DataPrep(GeneExp, CellProp, Demo, include.demo=include.demo)
+  Data2 <- DataPrep(GeneExp, CellProp, Demo, include.demo=include.demo, w = w)
   # L <- ncol(Data2$X)-1
   # if (random=="all") random <- 1:L
   mod <- ols.eblup.trim(Des=Data2$X, Y=Data2$Y, random=random, ...)

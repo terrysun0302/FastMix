@@ -21,10 +21,12 @@ DataPrep(GeneExp, CellProp, Demo, include.demo=TRUE)
   }
   \item{Demo}{
   \code{Demo} is a n by p dimensional matrix of clinical and demographic
-variables to be tested, where p is the number of covariates. 
+variables to be tested, where p is the number of covariates.
   }
   \item{include.demo}{Whether the demographical covariates should be
 included as the main effects in the model or not. Default to TRUE.}
+}
+ \item{w}{The weight matrix.}
 }
 \details{
 %%  ~~ If necessary, more details than the description above ~~

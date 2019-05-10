@@ -37,7 +37,7 @@ rhalfinv <- function(X, min.cond.num=1e-6) {
 }
 
 
-data_gen <- function(m, n, seed = 1, outlier = T, cor = 0, balance = T){
+data_gen <- function(m, n, seed = 1, outlier = T, cor = 0, balance = T, weight = F){
   ## generate some new simulated data
   n <- n
   set.seed(seed)
@@ -112,16 +112,28 @@ data_gen <- function(m, n, seed = 1, outlier = T, cor = 0, balance = T){
   }
 
   ## generate the gene expression
-  Err <- matrix(rnorm(m*n, sd=sqrt(sigma2.err)), nrow=m, ncol=n)
+  if(typeof(weight) == "logical"){
+    if(weight == F){
+      Err <- matrix(rnorm(m*n, sd=sqrt(sigma2.err)), nrow=m, ncol=n)
+    }
+  }
+  else{ # i.d but not i.i.d
+    Err <- matrix(rnorm(m*n, sd=sqrt(sigma2.err)), nrow=m, ncol=n)
+    ### the cor structure
+    weight = weight
+    e = eigen(weight)
+    w = e$vectors %*% sqrt(diag(e$values)) %*% t(e$vectors)
+    Err = Err %*% w
+  }
   colnames(Err) <- paste0("Subj", 1:n); rownames(Err) <- paste0("Gene", 1:m)
 
   ## Use DataPrep to get Xmat; Y is irrelevant
-  Xmat <- t(DataPrep(Err, CellProp, Demo)$X[1:n, -1])
+  Xmat <- t(DataPrep(Err, CellProp, Demo, w = diag(rep(1, n)))$X[1:n, -1])
 
   ## the gene expression matrix
   GeneExp <- (Bmat + Gmat) %*% Xmat + Err
 
-  return(list(GeneExp = GeneExp, CellProp = CellProp, Demo = Demo, Bmat = Bmat, Gmat = Gmat, sigmamat = sigmamat))
+  return(list(GeneExp = GeneExp, CellProp = CellProp, Demo = Demo, Bmat = Bmat, Gmat = Gmat, sigmamat = sigmamat, Err = Err))
 }
 
 .cov.est <- function(bmat, var.epsilon, xx, m, coef){
@@ -142,7 +154,7 @@ robust.cov.est <- function(bmat, var.epsilon, xx, m, robust){
 }
 
 ## A convenience function to generate the combined covariate matrix
-DataPrep <- function(GeneExp, CellProp, Demo, include.demo=TRUE){
+DataPrep <- function(GeneExp, CellProp, Demo, include.demo=TRUE, w){ # here, w is the weight function
   m <- nrow(GeneExp); n <- nrow(Demo)
   ## assign gene names if empty
   if (is.null(rownames(GeneExp))) rownames(GeneExp) <- paste0("Gene", 1:m)
@@ -169,6 +181,11 @@ DataPrep <- function(GeneExp, CellProp, Demo, include.demo=TRUE){
   } else {
     X0 <- cbind(CellProp, Crossterms)
   }
+
+  ### weighted sample
+  X0 = w %*% X0
+  GeneExp = GeneExp %*% w
+
   ## check the SVD and provide some warning messages
   ss <- svd(X0)$d
   if (min(ss)<1e-7) stop("The design matrix is numerically singular. Please consider: (a) include less cell types in the model, or (b) use 'include.demo=FALSE' to exclude the main effects of demographic covariates from the model.")
@@ -180,16 +197,98 @@ DataPrep <- function(GeneExp, CellProp, Demo, include.demo=TRUE){
   return(list(X=X,Y=Y))
 }
 
+#==================================================================================================================#
+#============================ new added functions for fix effect bias correction 04/15/2019 =======================#
+#==================================================================================================================#
+
+## Sfunc1 is a function that takes mu, R, and L (dimensions), and
+## returns S (the conditional mean), dS (the derivative), and some
+## intermediate results (T_R(mu), B_R(mu), and H_R(mu), see Eqn(4)).
+Sfunc1 <- function(mu, R, L, ngrid=500){
+  dx <- 2*R/ngrid; mygrid <- seq(-R, R, dx)
+  phi.grid <- dnorm(mygrid-mu)
+  Fchi2.grid <- pchisq(R^2-mygrid^2, L-1)
+  h.grid <- Fchi2.grid*phi.grid
+  Bmu <- sum(h.grid)*dx
+  Tmu <- sum(h.grid*mygrid)*dx
+  Hmu <- sum(h.grid*(mygrid^2))*dx
+  return(c(Tmu=Tmu, Bmu=Bmu, Hmu=Hmu,
+           S=Tmu/Bmu, dS=(Hmu*Bmu - Tmu^2)/Bmu^2))
+}
+
+## This is the univariate version of the inverse of S, using
+## Newton-Raphson. mu1.trim: trimmed mean of mu1 (the first dimension).
+Sinv1 <- function(mu1.trim, R, L, ngrid=500, tol=1e-4, max.iter=10){
+  k <- 0; err <- Inf; mu1.now=mu1.trim
+  while ( ( abs(err) > tol) & (k < max.iter) ) {
+    rk <- Sfunc1(mu1.now,R,L,ngrid=ngrid)
+    mu1.next <- mu1.now - (rk[["S"]]-mu1.trim)/rk[["dS"]]
+    k <- k+1; err <- mu1.next-mu1.now
+    mu1.now <- mu1.next
+  }
+  if ( abs(err) > tol ) warning("Maximum number of iteration reached but the error is still greater than the tolerance level.")
+  return(list(mu1=mu1.now, niter=k, err=err))
+}
+
+## This is the conditional variance of X
+sigmaR2 <- function(trim, L) {
+  sigmaR2 <- pchisq(qchisq(1-trim, df=L), df=L+2) / (1-trim)
+  return(sigmaR2)
+}
+
+
+## this is a wrapper for estimating the trimmed mean with bias
+## correction. X is an nxL dimensional matrix (so the transpose is
+## required). Sigma is the covariance matrix of X, which should be
+## estimated prior to mean estimation.
+RobustMeanEst <- function(X, Sigma=diag(ncol(X)), trim=0.5, tol=1e-2, max.iter=10,...){
+  L <- ncol(X); S.half.inv <- rhalfinv(Sigma); S.half <- rsolve(S.half.inv)
+  ## 1. standardize X
+  Xtilde <- X %*% S.half.inv
+  ## 2. initial estimation and trimming
+  mus.now=colMeans(Xtilde)
+  ## start the main loop
+  k <- 0; err <- Inf;
+  while ( ( abs(err) > tol) & (k < max.iter) ) {
+    ## (a) the centered data
+    Z <- sweep(Xtilde, 2, mus.now)
+    ## (b) trimming by Euclidean length squared of Z
+    ll <- sqrt(rowSums(Z^2))
+    R <- as.numeric(quantile(ll, 1-trim)); idx <- which(ll <= R)
+    ## (c). compute the trimmed mean, and decompose it into length/direction
+    if(L == 1)  {
+      Mvec.trim <- mean(Z[idx,])
+    }
+    else {
+      Mvec.trim <- colMeans(Z[idx,])
+    }
+    M.trim <- sqrt(sum(Mvec.trim^2)); v <- Mvec.trim/M.trim
+    ## (d) bias-correction
+    o <- Sinv1(M.trim, R, L=L, ...)
+    err <- o$mu1    #magnitude of the kth update
+    mus.next <- mus.now + err * v
+    mus.now <- mus.next
+    k <- k+1
+  }
+  ## 4. rotate mus.now to mu.hat
+  mu.est <- drop(S.half %*% mus.now)
+  ## 5. compute the variance inflation coefficient
+  kappa <- err/M.trim; V.inflation <- kappa^2 * sigmaR2(trim, L)/(1-trim)
+  return(list(mu.est=mu.est, niter=k, err=err, R=R, V.inflation=V.inflation))
+}
+#================================================== end ===========================================================#
+#==================================================================================================================#
 
 #----------------------------------------------------------------------------#
 # the function to calculate the chi-square type value. Similar as ols.eblup  #
 #----------------------------------------------------------------------------#
-hy.ols.blup.wrapper <- function(Des, Y, var.epsilon, number, random = random, vc, independent = F, trim.idx = NULL, min.cond.num=1e-6) {
+hy.ols.blup.wrapper <- function(Des, Y, var.epsilon, number, random = random, vc, independent = F, trim.idx = NULL, min.cond.num=1e-6,
+                                bias_term) {
   vc <- as.matrix(vc)                   #works for 1x1 matrix
   if(independent == F){
     a <- eigen(vc, symmetric=TRUE)
     a$values <- pmax(a$values, var.epsilon/100)
-    ## deal with length(random)==1 
+    ## deal with length(random)==1
     if (length(a$values)==1) {
       L <- as.matrix(sqrt(a$values)); L2 <- as.matrix(a$values)
     } else {
@@ -199,10 +298,19 @@ hy.ols.blup.wrapper <- function(Des, Y, var.epsilon, number, random = random, vc
     vc.hat <- a$vectors %*% L2 %*% t(a$vectors)
     Des.prime <- Des[,c(1+random)] %*% A # transformt the design matrix
     DZ.prime <- Des.prime
-  } else {                              #the independent case
-    a <- pmax(diag(as.matrix(vc)), var.epsilon/100)
-    A <- diag(sqrt(a))
-    vc.hat <- diag(a)
+  } else {
+    #the independent case
+    vc = diag(vc)
+    a <- eigen(vc, symmetric=TRUE)
+    a$values <- pmax(a$values, var.epsilon/100)
+    ## deal with length(random)==1
+    if (length(a$values)==1) {
+      L <- as.matrix(sqrt(a$values)); L2 <- as.matrix(a$values)
+    } else {
+      L <-  diag(sqrt(a$values)); L2 <-  diag(a$values)
+    }
+    A <- a$vectors %*% L %*% t(a$vectors)
+    vc.hat <- a$vectors %*% L2 %*% t(a$vectors)
     Des.prime <- Des[,c(1+random)] %*% A # transformt the design matrix
     DZ.prime <- Des.prime
   }
@@ -210,7 +318,7 @@ hy.ols.blup.wrapper <- function(Des, Y, var.epsilon, number, random = random, vc
   ##########Step 5: estimate \lambda
   lambda.hat <- 1/var.epsilon
 
-  ########## estimation of the covariance matrix and the vakue of beta
+  ########## estimation of the covariance matrix and the value of beta
   ZZ <- lapply(1:m, function(i) t(DZ.prime[(number[i]+1):(number[i+1]),]) %*% DZ.prime[(number[i]+1):(number[i+1]),] )
   cap <-  lapply(1:m, function(i) {rsolve(diag(length(random)) + lambda.hat * ZZ[[i]])})
   XZ <-  lapply(1:m, function(i) t(Des[(number[i]+1):(number[i+1]),-1]) %*%  DZ.prime[(number[i]+1):(number[i+1]),])
@@ -242,6 +350,9 @@ hy.ols.blup.wrapper <- function(Des, Y, var.epsilon, number, random = random, vc
     betahat <- 1/var.epsilon * sigmabeta %*% Reduce("+", betai)
   }
   #betahat.back <- A %*% betahat
+
+  ### 04/15/2019: new added step: bias correction
+  betahat[random] = betahat[random] + bias_term
 
   ######EBLUP:
   gamma.hat <- lapply(1:m, function(i) lambda.hat * A %*% (ZY[[i]] - t(XZ[[i]]) %*% betahat - lambda.hat * ZZ[[i]] %*% cap[[i]] %*% ZY[[i]] + lambda.hat * ZZ[[i]] %*% cap[[i]] %*% t(XZ[[i]]) %*% betahat))

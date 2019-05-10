@@ -153,6 +153,25 @@ kable(round(retab, 3))
 
 Judging from the above table, we see that for all covariates, the type I error is controlled at the nominal level. We also noticed that for all covariates, we have relatively good power to detect gene-specific associations between the covariates, including the interactions between cell proportion, clinical variables, and gene expressions.
 
+### Extention to weighted samples.
+
+In many applications, the noise may not be i.i.d, and the idea behind weighted least square (WLS) can be used to overcome this issue. One example is that, in the above simulation study, the $n = 50$ subjects are measured at 5 different locations, and the error terms have diffferent variance due to the location effect. We modify the simulation study as follows as an example:
+
+1, All subjects are independent, but are not identically distributed. The variance of the noise for the first 25 subjects are $\sigma_{\epsilon}^2$; the variance of the noise for the subjects 26 to 50 are $2 \sigma_{\epsilon}^2$. 
+2, This weight structure should be known. 
+
+With this information (the noise structure), we can use weighted smaples in the piepline:
+
+```{r weighted sample, include=TRUE, echo=TRUE, results='asis'}
+weight_matrix = diag(c(rep(c(1,2), each = 25)))
+### we generate a weighted data
+dat = data_gen(m, n, seed = 10, outlier = T, cor = 0.5, balance = F, weight = weight_matrix)
+set.seed(123)
+system.time(mod2 <- FastMix(dat$GeneExp, dat$CellProp, dat$Demo, independent = F, weight_matrix = weight_matrix))
+set.seed(123)
+system.time(mod3 <- FastMix(dat$GeneExp, dat$CellProp, dat$Demo, independent = F, weight_matrix = NULL))
+```
+The first table shows the results using sample-specific weights while the second table show the results without sample-specific weights. We see that for all covariates, the type I error is controlled at the nominal level when weights are used. The type I error without weights are pretty small. We also noticed that when weights are used, we have relatively better power to detect gene-specific associations between the covariates, including the interactions between cell proportion, clinical variables, and gene expressions. See the paper for more details. 
 
 ## Real data example
 

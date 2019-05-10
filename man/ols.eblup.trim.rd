@@ -46,6 +46,7 @@ analysis. \code{min.cond.num} is a threshold of the minimum condition
 number of matrix to be inverted. If \code{cond(A)} is less than this
 value (default: 1e-6), a robust matrix inverse is used instead.
   }
+  \item{bias_term}{The bias vector created by bias-correction step}
 }
 \details{
 %%  ~~ If necessary, more details than the description above ~~
