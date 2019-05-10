@@ -166,12 +166,43 @@ With this information (the noise structure), we can use weighted smaples in the 
 weight_matrix = diag(c(rep(c(1,2), each = 25)))
 ### we generate a weighted data
 dat = data_gen(m, n, seed = 10, outlier = T, cor = 0.5, balance = F, weight = weight_matrix)
+
 set.seed(123)
 system.time(mod2 <- FastMix(dat$GeneExp, dat$CellProp, dat$Demo, independent = F, weight_matrix = weight_matrix))
+
+rr.cell1 <- c(Power=sum(mod2$re.ind.pvalue[1:250, "Cell1"]<0.05)/250,
+              TypeI.Err=sum(mod2$re.ind.pvalue[251:m, "Cell1"]<0.05)/(m-250))
+rr.severity <- c(Power=sum(mod2$re.ind.pvalue[251:500, "Severity"]<0.05)/250,
+                 TypeI.Err=sum(mod2$re.ind.pvalue[c(1:250, 501:m), "Severity"]<0.05)/(m-250))
+rr.cell2.severity <- c(Power=sum(mod2$re.ind.pvalue[501:750, "Cell2.Severity"]<0.05)/250,
+                 TypeI.Err=sum(mod2$re.ind.pvalue[c(1:500, 751:m), "Cell2.Severity"]<0.05)/(m-250))
+rr.cell2.sex <- c(Power=sum(mod2$re.ind.pvalue[751:1000, "Cell2.Sex"]<0.05)/250,
+                 TypeI.Err=sum(mod2$re.ind.pvalue[c(1:750, 1001:m), "Cell2.Sex"]<0.05)/(m-250))
+rr.others <- c(Power=NA, TypeI.Err=sum(mod2$re.ind.pvalue[, -c(1,4,10)]<0.05)/(m*8))
+retab <- cbind(Cell1=rr.cell1, Severity=rr.severity, Cell2.Severity=rr.cell2.severity,
+               Cell2.Sex=rr.cell2.sex, Others=rr.others)
+
+kable(round(retab, 3))
+
 set.seed(123)
 system.time(mod3 <- FastMix(dat$GeneExp, dat$CellProp, dat$Demo, independent = F, weight_matrix = NULL))
+
+rr.cell1 <- c(Power=sum(mod3$re.ind.pvalue[1:250, "Cell1"]<0.05)/250,
+              TypeI.Err=sum(mod3$re.ind.pvalue[251:m, "Cell1"]<0.05)/(m-250))
+rr.severity <- c(Power=sum(mod3$re.ind.pvalue[251:500, "Severity"]<0.05)/250,
+                 TypeI.Err=sum(mod3$re.ind.pvalue[c(1:250, 501:m), "Severity"]<0.05)/(m-250))
+rr.cell2.severity <- c(Power=sum(mod3$re.ind.pvalue[501:750, "Cell2.Severity"]<0.05)/250,
+                 TypeI.Err=sum(mod3$re.ind.pvalue[c(1:500, 751:m), "Cell2.Severity"]<0.05)/(m-250))
+rr.cell2.sex <- c(Power=sum(mod3$re.ind.pvalue[751:1000, "Cell2.Sex"]<0.05)/250,
+                 TypeI.Err=sum(mod3$re.ind.pvalue[c(1:750, 1001:m), "Cell2.Sex"]<0.05)/(m-250))
+rr.others <- c(Power=NA, TypeI.Err=sum(mod1$re.ind.pvalue[, -c(1,4,10)]<0.05)/(m*8))
+retab <- cbind(Cell1=rr.cell1, Severity=rr.severity, Cell2.Severity=rr.cell2.severity,
+               Cell2.Sex=rr.cell2.sex, Others=rr.others)
+
+kable(round(retab, 3))
 ```
-The first table shows the results using sample-specific weights while the second table show the results without sample-specific weights. We see that for all covariates, the type I error is controlled at the nominal level when weights are used. The type I error without weights are pretty small. We also noticed that when weights are used, we have relatively better power to detect gene-specific associations between the covariates, including the interactions between cell proportion, clinical variables, and gene expressions. See the paper for more details. 
+
+The first table shows the results using sample-specific weights while the second table shows the results without sample-specific weights. We see that for all covariates, the type I error is controlled at the nominal level when weights are used. The type I error without weights are pretty small. We also noticed that when weights are used, we have relatively better power to detect gene-specific associations between the covariates, including the interactions between cell proportion, clinical variables, and gene expressions. See the paper for more details. 
 
 ## Real data example
 
