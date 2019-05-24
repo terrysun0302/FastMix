@@ -389,17 +389,17 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
 
 
 ########## the main wrapper for deconvolution problem ##########
-FastMix <- function(GeneExp, CellProp, Demo, random="all", include.demo=TRUE, weight_matrix = NULL, ...){
+FastMix <- function(GeneExp, CellProp, Demo, random="all", include.demo=TRUE, cov_matrix = NULL, ...){
 
   ### num. of subjects
   n = ncol(GeneExp)
 
-  ### the weight step: with knwon weights among subjects. weight_matrix is n by n
-  if(is.null(weight_matrix)){
+  ### the weight step: with knwon weights among subjects. cov_matrix is n by n
+  if(is.null(cov_matrix)){
     w = diag(rep(1, n))
   }
   else{
-    e = eigen(weight_matrix)
+    e = eigen(cov_matrix)
     ### the weight matrix, e.g., WLS
     w = e$vectors %*% sqrt(diag(1/e$values)) %*% t(e$vectors)
   }

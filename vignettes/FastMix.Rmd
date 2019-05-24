@@ -163,9 +163,9 @@ In many applications, the noise may not be i.i.d, and the idea behind weighted l
 With this information (the noise structure), we can use weighted smaples in the piepline:
 
 ```{r weighted sample, include=TRUE, echo=TRUE, results='asis'}
-weight_matrix = diag(c(rep(c(1,2), each = 25)))
+cov_matrix = diag(c(rep(c(1,2), each = 25)))
 ### we generate a weighted data
-dat = data_gen(m, n, seed = 10, outlier = T, cor = 0.5, balance = F, weight = weight_matrix)
+dat = data_gen(m, n, seed = 10, outlier = T, cor = 0.5, balance = F, weight = cov_matrix)
 
 set.seed(123)
 system.time(mod2 <- FastMix(dat$GeneExp, dat$CellProp, dat$Demo, independent = F, weight_matrix = weight_matrix))
