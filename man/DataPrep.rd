@@ -24,9 +24,8 @@ DataPrep(GeneExp, CellProp, Demo, include.demo=TRUE)
 variables to be tested, where p is the number of covariates.
   }
   \item{include.demo}{Whether the demographical covariates should be
-included as the main effects in the model or not. Default to TRUE.}
-}
- \item{w}{The weight matrix.}
+    included as the main effects in the model or not. Default to TRUE.}
+  \item{w}{The weight matrix.}
 }
 \details{
 %%  ~~ If necessary, more details than the description above ~~
