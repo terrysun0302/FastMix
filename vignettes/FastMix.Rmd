@@ -168,7 +168,7 @@ cov_matrix = diag(c(rep(c(1,2), each = 25)))
 dat = data_gen(m, n, seed = 10, outlier = T, cor = 0.5, balance = F, weight = cov_matrix)
 
 set.seed(123)
-system.time(mod2 <- FastMix(dat$GeneExp, dat$CellProp, dat$Demo, independent = F, weight_matrix = weight_matrix))
+system.time(mod2 <- FastMix(dat$GeneExp, dat$CellProp, dat$Demo, independent = F, cov_matrix = cov_matrix))
 
 rr.cell1 <- c(Power=sum(mod2$re.ind.pvalue[1:250, "Cell1"]<0.05)/250,
               TypeI.Err=sum(mod2$re.ind.pvalue[251:m, "Cell1"]<0.05)/(m-250))
@@ -185,7 +185,7 @@ retab <- cbind(Cell1=rr.cell1, Severity=rr.severity, Cell2.Severity=rr.cell2.sev
 kable(round(retab, 3))
 
 set.seed(123)
-system.time(mod3 <- FastMix(dat$GeneExp, dat$CellProp, dat$Demo, independent = F, weight_matrix = NULL))
+system.time(mod3 <- FastMix(dat$GeneExp, dat$CellProp, dat$Demo, independent = F, cov_matrix = NULL))
 
 rr.cell1 <- c(Power=sum(mod3$re.ind.pvalue[1:250, "Cell1"]<0.05)/250,
               TypeI.Err=sum(mod3$re.ind.pvalue[251:m, "Cell1"]<0.05)/(m-250))
