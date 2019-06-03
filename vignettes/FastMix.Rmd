@@ -155,19 +155,28 @@ Judging from the above table, we see that for all covariates, the type I error i
 
 ### Extention to weighted samples.
 
-In many applications, the noise may not be i.i.d, and the idea behind weighted least square (WLS) can be used to overcome this issue. One example is that, in the above simulation study, the $n = 50$ subjects are measured at 5 different locations, and the error terms have diffferent variance due to the location effect. We modify the simulation study as follows as an example:
+In many applications, the noise may not be i.i.d.  One such example is that samples in the study may have different Total Number of Mapped Reads (TNMR, a.k.a. sequencing depths). This information is typically provided by the researchers as a quality metric, and can be considered as **inversely proportional** to the variance of the (properly normalized) expression levels in a sample.  In this case, we argue that using weights that are **proportional to** the TNMR will give us better results than a comparable model that treats all samples as equal.
 
-1, All subjects are independent, but are not identically distributed. The variance of the noise for the first 25 subjects are $\sigma_{\epsilon}^2$; the variance of the noise for the subjects 26 to 50 are $2 \sigma_{\epsilon}^2$. 
-2, This weight structure should be known. 
+In this section, we consider the following simulation study:
 
-With this information (the noise structure), we can use weighted smaples in the piepline:
+1. All subjects are independent, but are not identically distributed. The variance of the $j$th sample is considered as $1/\mathrm{TNMR}_{j}$, where $\mathrm{TNMR}_{j}$ is generated from a uniform distribution $U(1, 10)$ (reads in millions).
+2. We apply both the weighted FastMix model and the unweighted FastMix model to this set of data. The results are summarized in the following two tables.
+
+
 
 ```{r weighted sample, include=TRUE, echo=TRUE, results='asis'}
-cov_matrix = diag(c(rep(c(1,2), each = 25)))
+
+set.seed(123)
+
+## Total number of mapped reads, a.k.a., sequencing depth, in millions.
+TNMR <- runif(50, min=1, max=10)
+
+## We assume that the variance is *inversely* proportional to TNMR for
+## normalized expressions
+cov_matrix <- diag(1/TNMR)
 ### we generate a weighted data
 dat = data_gen(m, n, seed = 10, outlier = T, cor = 0.5, balance = F, weight = cov_matrix)
 
-set.seed(123)
 system.time(mod2 <- FastMix(dat$GeneExp, dat$CellProp, dat$Demo, independent = F, cov_matrix = cov_matrix))
 
 rr.cell1 <- c(Power=sum(mod2$re.ind.pvalue[1:250, "Cell1"]<0.05)/250,
@@ -195,14 +204,18 @@ rr.cell2.severity <- c(Power=sum(mod3$re.ind.pvalue[501:750, "Cell2.Severity"]<0
                  TypeI.Err=sum(mod3$re.ind.pvalue[c(1:500, 751:m), "Cell2.Severity"]<0.05)/(m-250))
 rr.cell2.sex <- c(Power=sum(mod3$re.ind.pvalue[751:1000, "Cell2.Sex"]<0.05)/250,
                  TypeI.Err=sum(mod3$re.ind.pvalue[c(1:750, 1001:m), "Cell2.Sex"]<0.05)/(m-250))
-rr.others <- c(Power=NA, TypeI.Err=sum(mod1$re.ind.pvalue[, -c(1,4,10)]<0.05)/(m*8))
-retab <- cbind(Cell1=rr.cell1, Severity=rr.severity, Cell2.Severity=rr.cell2.severity,
+rr.others <- c(Power=NA, TypeI.Err=sum(mod3$re.ind.pvalue[, -c(1,4,10)]<0.05)/(m*8))
+retab3 <- cbind(Cell1=rr.cell1, Severity=rr.severity, Cell2.Severity=rr.cell2.severity,
                Cell2.Sex=rr.cell2.sex, Others=rr.others)
 
-kable(round(retab, 3))
+kable(round(retab3, 3))
 ```
 
-The first table shows the results using sample-specific weights while the second table shows the results without sample-specific weights. We see that for all covariates, the type I error is controlled at the nominal level when weights are used. The type I error without weights are pretty small. We also noticed that when weights are used, we have relatively better power to detect gene-specific associations between the covariates, including the interactions between cell proportion, clinical variables, and gene expressions. See the paper for more details. 
+The first table shows the results using sample-specific weights while the second table shows the results without sample-specific weights. We see that for all five covariates, the type I error is controlled at the nominal level for both methods. 
+
+When weights are used, we have relatively higher power to detect gene-specific associations between the covariates, especially for the interactions between cell proportion, clinical variables, and gene expressions. 
+
+Note that in our implementation of the weighted FastMix model, we can specify a much general covariance structure that could include both heterogeneous variances (as shown in the above example) and **correlation** among samples, possibly due to serial correlation in a longitudinal study.  Howver, as of now, we require that such correlation is know (or estimable from the data). Please see [Yun and Xing 2019 BMC Bioinformatics] for a moment-based method for estimating such complex covariance structure.  Also please see our current paper for more technical details of the weighted FastMix method.
 
 ## Real data example
 
