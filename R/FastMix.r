@@ -69,6 +69,7 @@
 
 ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, robust = "FastMix", test = 1, trim.fix = TRUE, min.cond.num=1e-6,
                            bias = 2) {
+
   N <- length(Y) # number of total observations
   ## Exclude the first column, ID, because it is just a label
   covariates <- colnames(Des)[-1]; p <- length(covariates)
@@ -121,7 +122,7 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
   ### when the number of random effects > 1
   if(p_random > 1){
     if(robust == FALSE) {
-      vc.refit <- .cov.est(ols, var.epsilon, XX, m, coef = coef_vector)
+      vc.refit <- cov.est(ols, var.epsilon, XX, m, coef = coef_vector)
       norandom <- names(which(diag(vc.refit) <= 0))
       if(length(norandom) > 0){
         warning(paste0("Some covariates designated with random effects (",
@@ -139,7 +140,7 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
     else if(robust == "FastMix") {
 
       ### intial B estimation
-      vc <- .cov.est(ols, var.epsilon, XX, m, coef = coef_vector)
+      vc <- cov.est(ols, var.epsilon, XX, m, coef = coef_vector)
       norandom <- names(which(diag(vc) <= 0))
       if(length(norandom) > 0){
         warning(paste0("Some covariates designated with random effects (",
@@ -167,6 +168,10 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
       initialfit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc, independent = independent,
                                         trim.idx = trim.idx, min.cond.num=min.cond.num, bias_term = bias_term)
 
+      # print(dim(Des)[1,])
+      # print(length(Y))
+      # print(dim(vc))
+      # print(dim(initialfit$blup))
       #=================================================================================================================#
       #===================== step 3: trimming based re-estimation of B =================================================#
       #=================================================================================================================#
@@ -206,7 +211,7 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
         coef_vector = c()
         coef_vector[norm_idx == T] = mult
         coef_vector[norm_idx == F] = 1
-        vc.refit <- .cov.est(ols, var.epsilon, XX, m, coef = coef_vector)
+        vc.refit <- cov.est(ols, var.epsilon, XX, m, coef = coef_vector)
 
         ### here, when there is at least one selected direction, wedo bias-correctionin these directions.
         B_cov_refit = lapply(1:m, function(i) vc.refit + var.epsilon * xx[[i]])
@@ -256,7 +261,7 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
     bias_term = 0
     v_inflation = 1
     if(robust == FALSE) {
-      vc.refit <- .cov.est(ols, var.epsilon, XX, m, coef = coef_vector)
+      vc.refit <- cov.est(ols, var.epsilon, XX, m, coef = coef_vector)
       norandom <- names(which(diag(vc.refit) <= 0))
       if(length(norandom) > 0){
         warning(paste0("Some covariates designated with random effects (",
@@ -272,7 +277,7 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
     else if(robust == "pairwiseQC") stop("This method only works with more than 1 random effect.")
     ### porposed robust estimation
     else if(robust == "FastMix") {
-      vc <- .cov.est(ols, var.epsilon, XX, m, coef = coef_vector)
+      vc <- cov.est(ols, var.epsilon, XX, m, coef = coef_vector)
       norandom <- names(which(diag(vc) <= 0))
       if(length(norandom) > 0){
         warning(paste0("Some covariates designated with random effects (",
@@ -294,6 +299,7 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
       rr_ols = RobustMeanEst(ols, B_cov[[1]], tol=0.001, max.iter=10)
       if(bias == 1 | bias == 2) bias_term = rr_ols$mu.est
       else bias_term = rep(0, p_random)
+
 
       initialfit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc, independent = independent, min.cond.num=min.cond.num, bias_term = bias_term)
 
@@ -319,7 +325,7 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
         mult = var(Norm_B[trim.idx,1])*lambda.quan
 
         coef_vector = c(mult)
-        vc.refit <- .cov.est(ols, var.epsilon, XX, m, coef = coef_vector)
+        vc.refit <- cov.est(ols, var.epsilon, XX, m, coef = coef_vector)
 
         ### here, when there is at least one selected direction, wedo bias-correctionin these directions.
         B_cov_refit = lapply(1:m, function(i) vc.refit + var.epsilon * xx[[i]])
@@ -343,6 +349,10 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
       }
     }
 
+    print(dim(Des))
+    print(length(Y))
+    print(dim(vc))
+
     ### the option for fix effect
     if(trim.fix == FALSE){
       refit <- hy.ols.blup.wrapper(Des, Y, var.epsilon, number, random = random, vc = vc.refit, independent = independent, min.cond.num=min.cond.num, bias_term = bias_term)
@@ -361,6 +371,10 @@ ols.eblup.trim <- function(Des, Y, random = "all", independent = F, trim = 0.5, 
   #----------------------------------------------------------------------------#
   betamat <- matrix(rep(refit$betahat, m), nrow = m, byrow = T)
   colnames(betamat) <- colnames(Des)[-1]
+
+  # print(dim(refit$blup))
+  # print(dim(betamat[,random]))
+
   betamat[,random] <- refit$blup + betamat[,random]
   t.fixed <- drop(refit$betahat/sqrt(diag(as.matrix(refit$sigmabeta))))
   t.fixed[random] <- t.fixed[random] / sqrt(v_inflation)

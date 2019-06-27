@@ -136,7 +136,7 @@ data_gen <- function(m, n, seed = 1, outlier = T, cor = 0, balance = T, weight =
   return(list(GeneExp = GeneExp, CellProp = CellProp, Demo = Demo, Bmat = Bmat, Gmat = Gmat, sigmamat = sigmamat, Err = Err))
 }
 
-.cov.est <- function(bmat, var.epsilon, xx, m, coef){
+cov.est <- function(bmat, var.epsilon, xx, m, coef){
   #m <- nrow(bmat)
   #vc <- diag(sqrt(coef)) %*% cov(bmat) %*% diag(sqrt(coef)) - 1/m * var.epsilon * xx
   vc <- cov(as.matrix(bmat))
@@ -284,6 +284,10 @@ RobustMeanEst <- function(X, Sigma=diag(ncol(X)), trim=0.5, tol=1e-2, max.iter=1
 #----------------------------------------------------------------------------#
 hy.ols.blup.wrapper <- function(Des, Y, var.epsilon, number, random = random, vc, independent = F, trim.idx = NULL, min.cond.num=1e-6,
                                 bias_term) {
+  N <- length(Y)
+  m <- length(unique(Des[,1]))
+  n <- N/m
+
   vc <- as.matrix(vc)                   #works for 1x1 matrix
   if(independent == F){
     a <- eigen(vc, symmetric=TRUE)
