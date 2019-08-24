@@ -65,7 +65,7 @@ stops and asks the user to reduce the complexity of the model.
 }
 \examples{
 ## load the data example
-data(dataexample)
+data(dat_train)
 
 ## preparing the covariate/response
 des1 <- DataPrep(GeneExp, CellProp, Demo)
