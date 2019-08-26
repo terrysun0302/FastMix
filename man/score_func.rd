@@ -12,7 +12,7 @@
 }
 \arguments{
   \item{mod1}{
-    An object from FatxMix model using training data.
+    An object from FastMix model using training data.
   }
   \item{Data_0}{
     See the function \code{DataPrep_test()}.
@@ -44,7 +44,7 @@
   %% ...
 }
 %% ...
-}
+
 \references{
 %% ~put references to the literature/web site here ~
 }
