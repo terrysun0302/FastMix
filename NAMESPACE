@@ -1,1 +1,2 @@
-exportPattern("^[[:alpha:]]+")
+## exportPattern("^[[:alpha:]]+")
+exportPattern(DataPrep, DataPrep_test, FastMix, ols.eblup.trim, score_func)

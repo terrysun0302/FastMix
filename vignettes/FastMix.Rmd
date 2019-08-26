@@ -85,7 +85,7 @@ The primary function in our package is `FastMix()`.  It takes the following prim
 
 ## Simulation 
 
-In this simulated study, there are $m=`r m`$ genes and $n=`r n`$ subjects. There are three cell types and the data are stored in object `CellProp`.  I created a clinical dataset called `Demo`, which consists of two variables, `Severity` and `Sex`.  Based on the previous discussion, the observed bulk gene expression may be associated with a total of $L=11$ covariates: 3 cell proportions, 2 clinical variables, and 6 of the interaction terms.  
+We first generate a set of data, called `dat_train`, which contains $m=`r m`$ genes and $n=`r n`$ subjects. There are three cell types and the data are stored in object `CellProp`.  I created a clinical dataset called `Demo`, which consists of two variables, `Severity` and `Sex`.  Based on the previous discussion, the observed bulk gene expression may be associated with a total of $L=11$ covariates: 3 cell proportions, 2 clinical variables, and 6 of the interaction terms.  
 
 I created true associations between the covariates and gene expressions in this way. 
 
@@ -101,7 +101,7 @@ I created true associations between the covariates and gene expressions in this 
 
 ### Structure of Simulated Data
 
-We provide a data example called `dataexample.rda` to examplify the simulated data. Notice that three data input are needed for function `FastMix()`.The object `CellProp` stores the proportion of cell types for each subject with 50 rows and 3 columns. The object `Demo` is a clinical dataset which consists of two variables, `Severity` and `Sex`, for each subjects with 50 rows and 2 columns. The object `GeneExp`, a  matrix with 5000 rows and 50 columns, stores the outcome of interest which consists of gene expression level with respect to subjects and genes. Based on the previous discussion, the observed bulk gene expression may be associated with a total of $L=11$ covariates: 3 cell proportions, 2 clinical variables, and 6 of the interaction terms.  
+The aforementioned data is provided as `dat_train` in `dataexample.rda`, distributed along with this R package, to examplify the simulated data. `dat_train` is a list of three objects: (a) object `CellProp`, which stores the proportion of cell types for each subject with 50 rows and 3 columns; object `Demo`, a clinical dataset which consists of two variables, `Severity` and `Sex`, for each subjects with 50 rows and 2 columns, and (c) object `GeneExp`, a  matrix with 5000 rows and 50 columns, stores the outcome of interest which consists of gene expression level with respect to subjects and genes. These three objects are required inputs for function `FastMix()`. Based on the previous discussion, the observed bulk gene expression may be associated with a total of $L=11$ covariates: 3 cell proportions, 2 clinical variables, and 6 of the interaction terms.  
 
 ### Using FastMix to analyze the simulated data
 
@@ -226,13 +226,17 @@ The first table shows the results using sample-specific weights while the second
 
 When weights are used, we have relatively higher power to detect gene-specific associations between the covariates, especially for the interactions between cell proportion, clinical variables, and gene expressions. 
 
-Note that in our implementation of the weighted FastMix model, we can specify a much general covariance structure that could include both heterogeneous variances (as shown in the above example) and **correlation** among samples, possibly due to serial correlation in a longitudinal study.  Howver, as of now, we require that such correlation is know (or estimable from the data). Please see [Yun and Xing 2019 BMC Bioinformatics] for a moment-based method for estimating such complex covariance structure.  Also please see our current paper for more technical details of the weighted FastMix method.
+Note that in our implementation of the weighted FastMix model, we can specify a much general covariance structure that could include both heterogeneous variances (as shown in the above example) and **correlation** among samples, possibly due to serial correlation in a longitudinal study.  Howver, as of now, we require that such correlation is known (or estimable from the data). Please see [Yun and Xing 2019 BMC Bioinformatics] for a moment-based method for estimating such complex covariance structure.  Also please see our current paper for more technical details of the weighted FastMix method.
 
-### Using the result from FastMix for discriminant analysis
+### Discriminant analysis based on the FastMix model
 
-We will use the results from mod1 to generate some scores in discriminant analysis for test data set.
 
-We first generate a test data set from the same data generation mechanism with sample size 200, and prepare the test data set using our functions for the generation of prediction scores. The response in `Data_1` and `Data_0` should be values with different sign.
+In this section, we will present an example that uses the FastMix model to conduct a discriminant analysis for a specified binary outcome, such as the `Severity` variable stored in our simulated data, `dat_train`.  Please see our paper for technical details of our approaches.
+
+As in any practical discriminant analysis, models developed from a training dataset (`dat_train` in this example) should be validated on an independent testing data set.  To this end, we generate such a test data set, with the same simulation settings as `dat_train` and a larger sample size ($n=200$), and name it as `dat_test`.  
+
+Due to technical reasons, the test dataset needs to be pre-processed before model development.  This can be done by calling function `DataPrep_test()`, and the results are designated as `Data_1` and `Data_0`.  We need to provide with `DataPrep_test()` the index of the binary outcome to be classified in the original data, such as `Sex` in our example.  After this processing step, `DataPrep_test()` will automatically rename it as `Res` (stands for "Response"), and all the other covariates as `Var1`, `Var2`, etc.  Note that by construction, the `Res` variable in these sets will be constants across all subjects with opposite signs. 
+
 
 ```{r score1, include=TRUE, echo=TRUE, results='asis'}
 
@@ -280,9 +284,14 @@ table(Data_0$X[,"Res"])
 
 ```
 
-By checking the head of the pseeudo data, we find some inportant indexs in the prediction score function. We use `Sex` as the response variable, and rename it as `Res`. The `head()` function shows that the $5$th column is the resposne variable, and the $9, 10, 11$th columns are the interaction terms with response. Finally, we show a summary plot and table for the classification results. 
+Note that we must let the scoring function know that which variable in the testing data is the binary outcome to be classified (function `DataPrep_test()` automatically renames this variable as `Res` in the processed data), and which variables are the interactions between `Res` and cell proportions.
 
-```{r score2, include=TRUE, echo=TRUE, results='asis'}
+By checking the first few rows of the processed data, we find that the $5$th column is the binary response variable, and the $9, 10, 11$th columns are the interaction terms between the response and cell proportions.  This information will be used in `score_func()` to produce several discriminant scores.
+
+Finally, we show some summary plots and tables for the classification results. 
+
+
+```{r score2, include=TRUE, echo=TRUE, results='asis', fig.width=12, fig.height=6}
 #================================================================================#
 #=============== step 3: clacluate the scores for classification ================#
 #================================================================================#
@@ -296,7 +305,7 @@ kable(round(head(Data_0$X),2))
 ### the predicted score using main data set
 predicted_score = score_func(mod1, Data_0, Data_1, Response_interaction_index = c(9,10,11), Response_idx = c(5))
 
-#par(mfrow=c(1,2))
+par(mfrow=c(1,2))
 xl <- c(min(predicted_score$single_score)-2, max(predicted_score$single_score)+2)
 hist(predicted_score$single_score[1:n2/2], xlim = xl, main = "Distribution of the overall score", xlab = "Overall score", col=rgb(0.95,0.95,0.95,0.5))
 hist(predicted_score$single_score[(n2/2+1):n2], col=rgb(0.05,0.05,0.05,0.5), add=TRUE)
@@ -321,6 +330,11 @@ colnames(summy_stat) = c("mean", "sd", "mean", "sd", "SNR")
 
 kable(round(summy_stat, 3))
 ```
+
+From the plots and tables, we see that both the one-dimensional overall and sparse scores have discriminant powers to separate the two gender groups, and the sparse score seems to have better signal-to-noise ration (SNR) than the overall score.
+
+These two scores, as well as their multivariate counterparts, can be used in linear or nonlinear machine learning algorithms to build the actual classifiers for the binary outcome.
+
 
 ## Real data example
 
