@@ -104,106 +104,106 @@ data_gen <- function(m, n, seed = 1, outlier = T, cor = 0, balance = T, weight =
   return(list(GeneExp = GeneExp, CellProp = CellProp, Demo = Demo, Bmat = Bmat, Gmat = Gmat, sigmamat = sigmamat, Err = Err))
 }
 
-# the data generation for csSAM simulation
-### generate the data for csSAM analysis. Only 1 binary Demo variable
-data_gen_csSAM <- function(m, n, seed = 1, outlier = T, cor = 0, balance = T, weight = F){
-  ## generate some new simulated data
-  n <- n
-  set.seed(seed)
-  CellProp <- cbind(Cell1=runif(n, .2, .3),
-                    Cell2=runif(n, .2, .3),
-                    Cell3=runif(n, .2, .3))
-  rownames(CellProp) <- paste0("Subj", 1:n)
-  Demo <- as.matrix(c(rep(0, n/2), rep(1, n/2)))
-  rownames(Demo) <- paste0("Subj", 1:n)
-
-  ## generate some true signals
-
-  m <- m                               #genes
-  bb <- c(1.5, 0, 0)                    #assoc. w. CellProp
-  sigma2.u <- 1
-  sigma2.e <- 0.6
-  sigma2.alpha <- 1.2
-  sigma2.err <- 1/16
-  #sigma2.err <- 0.5 #i.i.d. noise
-  ## mean interactions
-  aa <- rep(0, 2); aa[1] <- .75
-
-  #Bmat <- t(replicate(m, c(bb, 0, 0.5, aa)))
-  Bmat <- t(replicate(m, c(1.5, 0.5, 0.5, 0,0,0,0)))
-  #Bmat <- t(replicate(m, c(1.5, 0.5, 0.5, -0.5, -0.5, 0.75, 0.5, 0.5, 0.5, -0.5, -0.5)))
-  L <- ncol(Bmat)
-  sdvec <- (c(rep(sigma2.u, 3), rep(sigma2.alpha,4)))
-
-  if(outlier == T){
-    ### the location shift
-    idx = c(5,6)
-    str = sdvec[idx] * 3.5
-    OutSig = matrix(NA, ncol = 2, nrow = m)
-    for(i in 1:2){ #the first 250 genes are DGEs for idx 4; the 251 to 500 genes are DEGs for idx 5
-      OutSig[,i] <- c(rep(0, m * 0.05 * (i-1)), rep(str[i], m * 0.05), rep(0, m*(1 - i * 0.05)))
-    }
-    if(balance == T) OutSig <- OutSig * (2*rbinom(length(OutSig), 1, .5) - 1) # approximately 0 mean
-    else if (balance == F) OutSig <- OutSig * (2*rbinom(length(OutSig), 1, 0.9) - 1) # approximately 0 mean
-
-    Bmat[,idx] = Bmat[,idx] + OutSig
-    if(cor == 0){
-      Gmat <- matrix(rnorm(L*m),m,L) %*% diag(sdvec)
-      sigmamat = diag(sdvec^2)
-      for(i in 1:2){
-        Gmat[(m * 0.05 * (i-1)+1):(m * 0.05 * i), idx[i]] <- Gmat[(m * 0.05 * (i-1)+1):(m * 0.05 * i), idx[i]]
-      }
-    }
-    else{
-      cormat <- matrix(cor, ncol = 7, nrow = 7)
-      diag(cormat) = 1
-      sigmamat <- sweep(sweep(cormat, 1, sdvec, "*"), 2, sdvec, "*")
-      a = chol(sigmamat)
-      Gmat <- matrix(rnorm(L*m),m,L) %*% a
-      for(i in 1:2){
-        Gmat[(m * 0.05 * (i-1)+1):(m * 0.05 * i), idx[i]] <- Gmat[(m * 0.05 * (i-1)+1):(m * 0.05 * i), idx[i]]
-      }
-    }
-  }
-  else{
-    Bmat = Bmat
-    if(cor == 0){
-      Gmat <- matrix(rnorm(L*m),m,L) %*% diag(sdvec)
-      sigmamat = diag(sdvec^2)
-    }
-    else{
-      cormat <- matrix(cor, ncol = 11, nrow = 11)
-      diag(cormat) = 1
-      sigmamat <- sweep(sweep(cormat, 1, sdvec, "*"), 2, sdvec, "*")
-      a = chol(sigmamat)
-      Gmat <- matrix(rnorm(L*m),m,L) %*% a
-    }
-  }
-
-  ## generate the gene expression
-  if(typeof(weight) == "logical"){
-    if(weight == F){
-      Err <- matrix(rnorm(m*n, sd=sqrt(sigma2.err)), nrow=m, ncol=n)
-    }
-  }
-  else{ # i.d but not i.i.d
-    Err <- matrix(rnorm(m*n, sd=sqrt(sigma2.err)), nrow=m, ncol=n)
-    ### the cor structure
-    weight = weight
-    e = eigen(weight)
-    w = e$vectors %*% sqrt(diag(e$values)) %*% t(e$vectors)
-    Err = Err %*% w
-  }
-  colnames(Err) <- paste0("Subj", 1:n); rownames(Err) <- paste0("Gene", 1:m)
-
-  ## Use DataPrep to get Xmat; Y is irrelevant
-  Xmat <- t(DataPrep(Err, CellProp, Demo, w = diag(rep(1, n)))$X[1:n, -1])
-
-  ## the gene expression matrix
-  GeneExp <- (Bmat + Gmat) %*% Xmat + Err
-
-  return(list(GeneExp = GeneExp, CellProp = CellProp, Demo = Demo, Bmat = Bmat, Gmat = Gmat, sigmamat = sigmamat, Err = Err))
-}
+# # the data generation for csSAM simulation
+# ### generate the data for csSAM analysis. Only 1 binary Demo variable
+# data_gen_csSAM <- function(m, n, seed = 1, outlier = T, cor = 0, balance = T, weight = F){
+#   ## generate some new simulated data
+#   n <- n
+#   set.seed(seed)
+#   CellProp <- cbind(Cell1=runif(n, .2, .3),
+#                     Cell2=runif(n, .2, .3),
+#                     Cell3=runif(n, .2, .3))
+#   rownames(CellProp) <- paste0("Subj", 1:n)
+#   Demo <- as.matrix(c(rep(0, n/2), rep(1, n/2)))
+#   rownames(Demo) <- paste0("Subj", 1:n)
+#
+#   ## generate some true signals
+#
+#   m <- m                               #genes
+#   bb <- c(1.5, 0, 0)                    #assoc. w. CellProp
+#   sigma2.u <- 1
+#   sigma2.e <- 0.6
+#   sigma2.alpha <- 1.2
+#   sigma2.err <- 1/16
+#   #sigma2.err <- 0.5 #i.i.d. noise
+#   ## mean interactions
+#   aa <- rep(0, 2); aa[1] <- .75
+#
+#   #Bmat <- t(replicate(m, c(bb, 0, 0.5, aa)))
+#   Bmat <- t(replicate(m, c(1.5, 0.5, 0.5, 0,0,0,0)))
+#   #Bmat <- t(replicate(m, c(1.5, 0.5, 0.5, -0.5, -0.5, 0.75, 0.5, 0.5, 0.5, -0.5, -0.5)))
+#   L <- ncol(Bmat)
+#   sdvec <- (c(rep(sigma2.u, 3), rep(sigma2.alpha,4)))
+#
+#   if(outlier == T){
+#     ### the location shift
+#     idx = c(5,6)
+#     str = sdvec[idx] * 3.5
+#     OutSig = matrix(NA, ncol = 2, nrow = m)
+#     for(i in 1:2){ #the first 250 genes are DGEs for idx 4; the 251 to 500 genes are DEGs for idx 5
+#       OutSig[,i] <- c(rep(0, m * 0.05 * (i-1)), rep(str[i], m * 0.05), rep(0, m*(1 - i * 0.05)))
+#     }
+#     if(balance == T) OutSig <- OutSig * (2*rbinom(length(OutSig), 1, .5) - 1) # approximately 0 mean
+#     else if (balance == F) OutSig <- OutSig * (2*rbinom(length(OutSig), 1, 0.9) - 1) # approximately 0 mean
+#
+#     Bmat[,idx] = Bmat[,idx] + OutSig
+#     if(cor == 0){
+#       Gmat <- matrix(rnorm(L*m),m,L) %*% diag(sdvec)
+#       sigmamat = diag(sdvec^2)
+#       for(i in 1:2){
+#         Gmat[(m * 0.05 * (i-1)+1):(m * 0.05 * i), idx[i]] <- Gmat[(m * 0.05 * (i-1)+1):(m * 0.05 * i), idx[i]]
+#       }
+#     }
+#     else{
+#       cormat <- matrix(cor, ncol = 7, nrow = 7)
+#       diag(cormat) = 1
+#       sigmamat <- sweep(sweep(cormat, 1, sdvec, "*"), 2, sdvec, "*")
+#       a = chol(sigmamat)
+#       Gmat <- matrix(rnorm(L*m),m,L) %*% a
+#       for(i in 1:2){
+#         Gmat[(m * 0.05 * (i-1)+1):(m * 0.05 * i), idx[i]] <- Gmat[(m * 0.05 * (i-1)+1):(m * 0.05 * i), idx[i]]
+#       }
+#     }
+#   }
+#   else{
+#     Bmat = Bmat
+#     if(cor == 0){
+#       Gmat <- matrix(rnorm(L*m),m,L) %*% diag(sdvec)
+#       sigmamat = diag(sdvec^2)
+#     }
+#     else{
+#       cormat <- matrix(cor, ncol = 11, nrow = 11)
+#       diag(cormat) = 1
+#       sigmamat <- sweep(sweep(cormat, 1, sdvec, "*"), 2, sdvec, "*")
+#       a = chol(sigmamat)
+#       Gmat <- matrix(rnorm(L*m),m,L) %*% a
+#     }
+#   }
+#
+#   ## generate the gene expression
+#   if(typeof(weight) == "logical"){
+#     if(weight == F){
+#       Err <- matrix(rnorm(m*n, sd=sqrt(sigma2.err)), nrow=m, ncol=n)
+#     }
+#   }
+#   else{ # i.d but not i.i.d
+#     Err <- matrix(rnorm(m*n, sd=sqrt(sigma2.err)), nrow=m, ncol=n)
+#     ### the cor structure
+#     weight = weight
+#     e = eigen(weight)
+#     w = e$vectors %*% sqrt(diag(e$values)) %*% t(e$vectors)
+#     Err = Err %*% w
+#   }
+#   colnames(Err) <- paste0("Subj", 1:n); rownames(Err) <- paste0("Gene", 1:m)
+#
+#   ## Use DataPrep to get Xmat; Y is irrelevant
+#   Xmat <- t(DataPrep(Err, CellProp, Demo, w = diag(rep(1, n)))$X[1:n, -1])
+#
+#   ## the gene expression matrix
+#   GeneExp <- (Bmat + Gmat) %*% Xmat + Err
+#
+#   return(list(GeneExp = GeneExp, CellProp = CellProp, Demo = Demo, Bmat = Bmat, Gmat = Gmat, sigmamat = sigmamat, Err = Err))
+# }
 
 
 #============================================================================================#
@@ -688,7 +688,7 @@ DataPrep_test <- function(GeneExp, CellProp, Demo, train_response, include.demo=
 ### m, gene number; n, subjects number;
 ### interaction_index, the index in design matrix for the interaction between cell and Demo
 ### Response_idx is the index of all temrs about the resposne variable except for the response*cell interaction terms
-score_func = function(mod1, Data_0, Data_1, Response_interaction_index = c(5,6,7), Response_idx = c(4)){
+score_func = function(mod1, Data_0, Data_1, Response_interaction_index, Response_idx){
   ### gene-level coefficient
   gene_coef = mod1$beta.mat
 

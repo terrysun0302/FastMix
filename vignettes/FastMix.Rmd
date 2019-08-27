@@ -23,6 +23,106 @@ sigma2.u <- 1
 sigma2.e <- 0.6
 sigma2.alpha <- 1.2
 sigma2.err <- 1/16
+
+# the data generation for main simulation
+data_gen <- function(m, n, seed = 1, outlier = T, cor = 0, balance = T, weight = F){
+  ## generate some new simulated data
+  n <- n
+  set.seed(seed)
+  CellProp <- cbind(Cell1=runif(n, .2, .3),
+                    Cell2=runif(n, .2, .3),
+                    Cell3=runif(n, .2, .3))
+  rownames(CellProp) <- paste0("Subj", 1:n)
+  Demo <- cbind(Severity=round(runif(n, 0, 10), 1),
+                Sex=c(rep(0, n/2), rep(1, n/2)))
+  rownames(Demo) <- paste0("Subj", 1:n)
+
+  ## generate some true signals
+
+  m <- m                               #genes
+  bb <- c(1.5, 0, 0)                     #assoc. w. CellProp
+  sigma2.u <- 1
+  sigma2.e <- 0.6
+  sigma2.alpha <- 1.2
+  sigma2.err <- 1/16
+  #sigma2.err <- 0.5 #i.i.d. noise
+  ## mean interactions
+  aa <- rep(0, 6); aa[1] <- .75
+
+  Bmat <- t(replicate(m, c(bb, 0, 0, aa)))
+  #Bmat <- t(replicate(m, c(1.5, 0.5, 0.5, -0.5, -0.5, 0.75, 0.5, 0.5, 0.5, -0.5, -0.5)))
+  L <- ncol(Bmat)
+  sdvec <- (c(rep(sigma2.u, 3), rep(sigma2.e,2), rep(sigma2.alpha, 6)))
+
+  if(outlier == T){
+    ### the location shift
+    idx = c(1,4,7,10)
+    str = sdvec[idx] * 3.5
+    OutSig = matrix(NA, ncol = 4, nrow = m)
+    for(i in 1:4){
+      OutSig[,i] <- c(rep(0, m * 0.05 * (i-1)), rep(str[i], m * 0.05), rep(0, m*(1 - i * 0.05)))
+    }
+    if(balance == T) OutSig <- OutSig * (2*rbinom(length(OutSig), 1, .5) - 1) # approximately 0 mean
+    else if (balance == F) OutSig <- OutSig * (2*rbinom(length(OutSig), 1, 0.9) - 1) # approximately 0 mean
+
+    Bmat[,idx] = Bmat[,idx] + OutSig
+    if(cor == 0){
+      Gmat <- matrix(rnorm(L*m),m,L) %*% diag(sdvec)
+      sigmamat = diag(sdvec^2)
+      for(i in 1:4){
+        Gmat[(m * 0.05 * (i-1)+1):(m * 0.05 * i), idx[i]] <- Gmat[(m * 0.05 * (i-1)+1):(m * 0.05 * i), idx[i]]
+      }
+    }
+    else{
+      cormat <- matrix(cor, ncol = 11, nrow = 11)
+      diag(cormat) = 1
+      sigmamat <- sweep(sweep(cormat, 1, sdvec, "*"), 2, sdvec, "*")
+      a = chol(sigmamat)
+      Gmat <- matrix(rnorm(L*m),m,L) %*% a
+      for(i in 1:4){
+        Gmat[(m * 0.05 * (i-1)+1):(m * 0.05 * i), idx[i]] <- Gmat[(m * 0.05 * (i-1)+1):(m * 0.05 * i), idx[i]]
+      }
+    }
+  }
+  else{
+    Bmat = Bmat
+    if(cor == 0){
+      Gmat <- matrix(rnorm(L*m),m,L) %*% diag(sdvec)
+      sigmamat = diag(sdvec^2)
+    }
+    else{
+      cormat <- matrix(cor, ncol = 11, nrow = 11)
+      diag(cormat) = 1
+      sigmamat <- sweep(sweep(cormat, 1, sdvec, "*"), 2, sdvec, "*")
+      a = chol(sigmamat)
+      Gmat <- matrix(rnorm(L*m),m,L) %*% a
+    }
+  }
+
+  ## generate the gene expression
+  if(typeof(weight) == "logical"){
+    if(weight == F){
+      Err <- matrix(rnorm(m*n, sd=sqrt(sigma2.err)), nrow=m, ncol=n)
+    }
+  }
+  else{ # i.d but not i.i.d
+    Err <- matrix(rnorm(m*n, sd=sqrt(sigma2.err)), nrow=m, ncol=n)
+    ### the cor structure
+    weight = weight
+    e = eigen(weight)
+    w = e$vectors %*% sqrt(diag(e$values)) %*% t(e$vectors)
+    Err = Err %*% w
+  }
+  colnames(Err) <- paste0("Subj", 1:n); rownames(Err) <- paste0("Gene", 1:m)
+
+  ## Use DataPrep to get Xmat; Y is irrelevant
+  Xmat <- t(DataPrep(Err, CellProp, Demo, w = diag(rep(1, n)))$X[1:n, -1])
+
+  ## the gene expression matrix
+  GeneExp <- (Bmat + Gmat) %*% Xmat + Err
+
+  return(list(GeneExp = GeneExp, CellProp = CellProp, Demo = Demo, Bmat = Bmat, Gmat = Gmat, sigmamat = sigmamat, Err = Err))
+}
 ```
 
 

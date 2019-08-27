@@ -9,7 +9,7 @@
 A wrapper for the main function \code{ols.eblup.trim()} to conduct deconvolution gene expression analysis with matching cell proportions.
 }
 \usage{
-FastMix(GeneExp, CellProp, Demo, random="all", include.demo=TRUE, ...)
+FastMix(GeneExp, CellProp, Demo, random="all", include.demo=TRUE, cov_matrix = NULL, ...)
 }
 \arguments{
   \item{GeneExp}{
@@ -29,6 +29,9 @@ variables to be tested, where p is the number of covariates.
   \item{include.demo}{
    Whether the demographical covariates should be
 included as the main effects in the model or not. Default to TRUE.
+  }
+    \item{cov_matrix}{
+   The sample-specific weight.
   }
   \item{...}{Additional parameters passed to \code{ols.eblup.trim()}. It
 includes the following useful options
@@ -103,13 +106,13 @@ Hao Sun
 }
 \examples{
 ## load the data example
-data(dataexample)
+data(dat_train)
 
 ## fit the model by default parameters
-mod1 <- FastMix(GeneExp, CellProp, Demo)
+mod1 <- FastMix(dat_train$GeneExp, dat_train$CellProp, dat_train$Demo)
 
 ## some variants: only assign random effects to a subset of covariates, and uses non-robust method to estimate the covariance structure
-mod2 <- FastMix(GeneExp, CellProp, Demo, random=c(1,2,10), robust = FALSE)
+mod2 <- FastMix(dat_train$GeneExp, dat_train$CellProp, dat_train$Demo, random=c(1,2,10))
 
 }                               % end examples.
 

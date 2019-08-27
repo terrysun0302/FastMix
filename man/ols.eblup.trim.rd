@@ -9,8 +9,7 @@
 mixed eﬀects regression (LMER) model and a moment-matching algorithm.
 }
 \usage{
-ols.eblup.trim (Des, Y, random = "all", independent = TRUE, trim = 0.5,
-test = 1, robust = FALSE, trim.fix = FALSE, min.cond.num=1e-6)
+ols.eblup.trim(Des, Y, random = "all", independent = F, trim = 0.5, robust = "FastMix", test = 1, trim.fix = TRUE, min.cond.num=1e-6, bias = 2)
 }
 \arguments{
   \item{Des}{
@@ -29,12 +28,12 @@ test = 1, robust = FALSE, trim.fix = FALSE, min.cond.num=1e-6)
     the trimming percentage when accounting for outliers.
     Default valie is 0.5 (50\%).
   }
+   \item{robust}{
+  Specifies whether robust covariance estimation is implemented and which method to use:  "FALSE" for non-robust estimation; "mcd" for the MCD algorithm of    Rousseeuw and Van Driessen; "weighted" for the Reweighted MCD; "donostah" for the Donoho-Stahel projection based estimator; "pairwiseQC" for the     orthogonalized quadrant correlation pairwise estimator. All these algorithms come from the R package `robust`. "FastMix" is the proposed trimming method.
+  }
    \item{test}{
     the test method for DEGs. "1" is Gaussian mixture model, "2" is
 Anderson-darling normal test. Default value is "1".
-  }
-  \item{robust}{
-  Specifies whether robust covariance estimation is implemented and which method to use:  "FALSE" for non-robust estimation; "mcd" for the MCD algorithm of    Rousseeuw and Van Driessen; "weighted" for the Reweighted MCD; "donostah" for the Donoho-Stahel projection based estimator; "pairwiseQC" for the     orthogonalized quadrant correlation pairwise estimator. All these algorithms come from the R package `robust`. "FastMix" is the proposed trimming method.
   }
    \item{trim.fix}{
   Whether only consider trimmed subjects in fix effect estiamtion. The default value is FALSE.
@@ -46,7 +45,7 @@ analysis. \code{min.cond.num} is a threshold of the minimum condition
 number of matrix to be inverted. If \code{cond(A)} is less than this
 value (default: 1e-6), a robust matrix inverse is used instead.
   }
-  \item{bias_term}{The bias vector created by bias-correction step}
+  \item{bias}{The method for bias-correction step. The default value is 2.}
 }
 \details{
 %%  ~~ If necessary, more details than the description above ~~
@@ -86,19 +85,7 @@ Hao Sun
 
 \seealso{
 %% ~~objects to See Also as \code{\link{help}}, ~~~
-}
-\examples{
-## load the data example and transform the data
-gnames <- rownames(GeneExp); m <- nrow(GeneExp)
-if (is.null(gnames)) {
-  rownames(GeneExp) <- gnames <- paste0("Gene", 1:m)
-}
-Data2 <- DataPrep(GeneExp, CellProp, Demo)
-
-## fit the model
-mod <- ols.eblup.trim(Des=Data2$X, Y=Data2$Y, random="all", robust = "FastMix")
-
-}                               % end examples.
+}                          % end examples.
 
 \keyword{models}% use one of  RShowDoc("KEYWORDS")
 %\keyword{ ~outliers }% __ONLY ONE__ keyword per line

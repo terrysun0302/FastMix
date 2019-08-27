@@ -10,7 +10,7 @@ preparing the response variables in a format that can be directly used
 by function \code{ols.eblup.trim()}.
 }
 \usage{
-DataPrep(GeneExp, CellProp, Demo, include.demo=TRUE)
+DataPrep(GeneExp, CellProp, Demo, include.demo=TRUE, w)
 }
 \arguments{
   \item{GeneExp}{
@@ -66,14 +66,10 @@ stops and asks the user to reduce the complexity of the model.
 \examples{
 ## load the data example
 data(dat_train)
-
+w = diag(rep(1, nrow(dat_train$Demo)))
 ## preparing the covariate/response
-des1 <- DataPrep(GeneExp, CellProp, Demo)
+des1 <- DataPrep(dat_train$GeneExp, dat_train$CellProp, dat_train$Demo,include.demo=TRUE, w = w)
 dim(des1$X)
-
-## without the demographic main effects
-des2 <- DataPrep(GeneExp, CellProp, Demo, include.demo=FALSE)
-dim(des2$X)
 
 }                               % end examples.
 

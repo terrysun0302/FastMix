@@ -13,7 +13,7 @@
   (Data_1).
 }
 \usage{
-  DataPrep_test(GeneExp, CellProp, Demo, include.demo=TRUE, train_response, w)
+  DataPrep_test(GeneExp, CellProp, Demo, train_response, include.demo=TRUE, w)
 }
 \arguments{
   \item{GeneExp}{
@@ -65,6 +65,16 @@
   ## load the data example
   data(dat_test)
   data(dat_train)
+
+  n2 <- nrow(dat_test$Demo)
+
+  w = diag(rep(1, n2))
+
+  gnames <- rownames(dat_test$GeneExp); m <- nrow(dat_test$GeneExp)
+  if (is.null(gnames)) {
+    rownames(dat_test$GeneExp) <- gnames <- paste0("Gene", 1:m)
+  }
+
 
   ## preparing the covariate/response
   test_data = DataPrep_test(dat_test$GeneExp, dat_test$CellProp, Demo=dat_test$Demo[,1], train_response = dat_train$Demo[,2], include.demo=TRUE, w)
