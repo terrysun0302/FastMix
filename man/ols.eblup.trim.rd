@@ -6,7 +6,7 @@
 }
 \description{
  A new analytic pipeline, dubbed as FastMix, that combines the deconvolution step with the downstream analyses based on linear
-mixed eﬀects regression (LMER) model and a moment-matching algorithm.
+mixed effects regression (LMER) model and a moment-matching algorithm.
 }
 \usage{
 ols.eblup.trim(Des, Y, random = "all", independent = F, trim = 0.5, robust = "FastMix", test = 1, trim.fix = TRUE, min.cond.num=1e-6, bias = 2)
