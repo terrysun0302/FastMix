@@ -398,7 +398,7 @@ By checking the first few rows of the processed data, we find that the $5$th col
 kable(round(head(Data_0$X),2))
 
 ### the predicted score using main data set
-DiscrScores = score_func(mod1, Data_0, Data_1, Response_interaction_index = c(9,10,11), Response_idx = c(5))
+DiscrScores = score_func(mod1, Data_0, Data_1, Response_interaction_index = c(9,10,11), Response_idx=5)
 
 
 ```
@@ -436,7 +436,7 @@ kable(round(summy_stat, 3))
 
 From the plots and tables, we see that both the one-dimensional overall and sparse scores have discriminant powers to separate the two gender groups, and the sparse score seems to have better signal-to-noise ration (SNR) than the overall score.
 
-These two scores, as well as their multivariate counterparts, can be used in linear or nonlinear machine learning algorithms to build the actual classifiers for the binary outcome.
+These two scores, as well as their multivariate counterparts (entries `multi_score` and `multi_sparse_score` in object `DiscrScores`), can be used in linear or nonlinear machine learning algorithms to build the actual classifiers for the binary outcome.
 
 
 ## Real data example
