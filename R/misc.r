@@ -296,7 +296,7 @@ DataPrep <- function(GeneExp, CellProp, Demo, include.demo=TRUE, w="iid"){ # her
   }
   ## by default, the weighting matrix is a diagonal matrix,
   ## representing the i.i.d. data
-  if (w=="iid") w <- diag(nrow(X0))
+  if (all(w=="iid")) w <- diag(nrow(X0))
 
   ### weighted sample
   X0 = w %*% X0
@@ -552,10 +552,12 @@ hy.ols.blup.wrapper <- function(Des, Y, var.epsilon, number, random = random, vc
 # include.demo: this option should be the same as the option in FastMix. Default = T      #
 # w: the weight covariance matrix among subjects                                          #
 #=========================================================================================#
-###  A function to generate the test data
-### # here, w is the weight function. Response_idx is the idx of response variable in the Demo matrix
-### Demo here is a vertor/matrix that contains demo information except for the Response vector, because this is the
-### variable we want to classify.
+
+###  A function to generate the test data. Here, w is the weight
+### function. Response_idx is the idx of response variable in the Demo
+### matrix Demo here is a vertor/matrix that contains demo information
+### except for the Response vector, because this is the variable we
+### want to classify.
 DataPrep_test <- function(GeneExp, CellProp, Demo, train_response, include.demo=TRUE, w="iid"){
   m <- nrow(GeneExp); n <- ncol(GeneExp)
   ## assign gene names if empty
@@ -624,7 +626,7 @@ DataPrep_test <- function(GeneExp, CellProp, Demo, train_response, include.demo=
 
   ## by default, the weighting matrix is a diagonal matrix,
   ## representing the i.i.d. data
-  if (w=="iid") w <- diag(nrow(X0))
+  if (all(w=="iid")) w <- diag(nrow(X0))
   ### weighted sample
   X0 = w %*% X0
   GeneExp = GeneExp %*% w
@@ -691,9 +693,9 @@ DataPrep_test <- function(GeneExp, CellProp, Demo, train_response, include.demo=
 # idx: the index for covariates without Demo interaction                                  #
 #=========================================================================================#
 
-### m, gene number; n, subjects number;
-### interaction_index, the index in design matrix for the interaction between cell and Demo
-### Response_idx is the index of all temrs about the resposne variable except for the response*cell interaction terms
+### m, gene number; n, subjects number; interaction_index, the index
+### in design matrix for the interaction between cell and Demo
+### Response_idx is the single index of the main response variable.
 score_func = function(mod1, Data_0, Data_1, Response_interaction_index, Response_idx){
   ### gene-level coefficient
   gene_coef = mod1$beta.mat
@@ -710,7 +712,7 @@ score_func = function(mod1, Data_0, Data_1, Response_interaction_index, Response
   if(m_train != m){
     stop("The number of genes is different, please check!")
   }
-
+  if (length(Response_idx) !=1) stop("You must select a single Response variable.")
   ### more than one sybjects in the test data
   if(n > 1) {
     ### because the data is stacked by ID, we also need to argument the coef_matrix

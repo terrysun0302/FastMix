@@ -344,12 +344,11 @@ Due to technical reasons, the test dataset needs to be pre-processed before mode
 #================= step 1: prepare the test data set  ===========================#
 #================================================================================#
 
-### this step cannot be wrap intot the score function because we need to check the Data2 to find the index
-# test data # of subjects
+### this step cannot be wrap into the score function because we need
+### to check the Data2 to find the index
+
+## number of subjects in the test data
 n2 <- 200
-
-w = diag(rep(1, n2))
-
 gnames <- rownames(dat_test$GeneExp); m <- nrow(dat_test$GeneExp)
 if (is.null(gnames)) {
   rownames(dat_test$GeneExp) <- gnames <- paste0("Gene", 1:m)
@@ -366,12 +365,10 @@ if (is.null(gnames)) {
 #test_data = DataPrep_test(dat_test$GeneExp, dat_test$CellProp, Demo=NULL, train_response = dat$Demo, include.demo=TRUE, w)
 
 ### this code use the data in main simulation. The difference is that Demo includes other variable than response 
-test_data = DataPrep_test(dat_test$GeneExp, dat_test$CellProp, Demo=dat_test$Demo[,1], train_response = dat_train$Demo[,2], include.demo=TRUE, w)
-
+test_data = DataPrep_test(dat_test$GeneExp, dat_test$CellProp, Demo=dat_test$Demo[,1], train_response = dat_train$Demo[,2], include.demo=TRUE)
 
 Data_0 = test_data$Data_0
 Data_1 = test_data$Data_1
-
 
 # Due to the way we assign hypothetical Response values, all entries
 # in Data_0 has "Response==0", and all entries in Data_0 has
@@ -379,8 +376,8 @@ Data_1 = test_data$Data_1
 # datasets: (a) are the same for all entries within one dataset; (b)
 # have exactly the opposite sign between these two datasets.
 
-table(Data_1$X[,"Res"])
-table(Data_0$X[,"Res"])
+round(table(Data_1$X[,"Res"]),3)
+round(table(Data_0$X[,"Res"]),3)
 
 ```
 
