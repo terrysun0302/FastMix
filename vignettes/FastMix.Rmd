@@ -384,43 +384,48 @@ table(Data_0$X[,"Res"])
 
 ```
 
-Note that we must let the scoring function know that which variable in the testing data is the binary outcome to be classified (function `DataPrep_test()` automatically renames this variable as `Res` in the processed data), and which variables are the interactions between `Res` and cell proportions.
+Note that we must let the scoring function know that which variable in the testing data is the binary outcome to be classified (function `DataPrep_test()` automatically renames this variable as `Res` in the processed data, and renames all other covariates as `Vari`, $i=1,2,\dots$), and which variables are the interactions between `Res` and cell proportions.
 
 By checking the first few rows of the processed data, we find that the $5$th column is the binary response variable, and the $9, 10, 11$th columns are the interaction terms between the response and cell proportions.  This information will be used in `score_func()` to produce several discriminant scores.
 
-Finally, we show some summary plots and tables for the classification results. 
-
-
-```{r score2, include=TRUE, echo=TRUE, results='asis', fig.width=12, fig.height=6}
+```{r score2, include=TRUE, echo=TRUE, results='asis'}
 #================================================================================#
 #=============== step 3: clacluate the scores for classification ================#
 #================================================================================#
 
-# we can overview the data to find some useful index for the score calculation
-# For the csSAM data, for example, we find the the response interaction term is at the 5,6,7th column (excluding ID column) of the data
-# and response is at the 4th column of the data
+# we can overview the data to find some useful index for the score
+# calculation. In this example, the 'Res' variable is the 5th column;
+# and the 9,10,11th columns are the interaction terms needed for
+# building the discriminant score.
 
 kable(round(head(Data_0$X),2))
 
 ### the predicted score using main data set
-predicted_score = score_func(mod1, Data_0, Data_1, Response_interaction_index = c(9,10,11), Response_idx = c(5))
+DiscrScores = score_func(mod1, Data_0, Data_1, Response_interaction_index = c(9,10,11), Response_idx = c(5))
+
+
+```
+
+Finally, we show some summary plots and tables for the classification results. 
+
+```{r score2-summary, include=TRUE, echo=TRUE, results='asis', fig.width=10, fig.height=5}
 
 par(mfrow=c(1,2))
-xl <- c(min(predicted_score$single_score)-2, max(predicted_score$single_score)+2)
-hist(predicted_score$single_score[1:n2/2], xlim = xl, main = "Distribution of the overall score", xlab = "Overall score", col=rgb(0.95,0.95,0.95,0.5))
-hist(predicted_score$single_score[(n2/2+1):n2], col=rgb(0.05,0.05,0.05,0.5), add=TRUE)
+xl <- c(min(DiscrScores$single_score)-2, max(DiscrScores$single_score)+2)
+hist(DiscrScores$single_score[1:n2/2], xlim = xl, main = "Distribution of the overall score", xlab = "Overall score", col=rgb(0.95,0.95,0.95,0.5))
+hist(DiscrScores$single_score[(n2/2+1):n2], col=rgb(0.05,0.05,0.05,0.5), add=TRUE)
 legend("topright", c("Res = 0", "Res = 1"), col = c(rgb(0.95,0.95,0.95,0.5), rgb(0.05,0.05,0.05,0.5)), lwd = 10, cex = 0.5)
 
-xl <- c(min(predicted_score$single_sparse_score)-2, max(predicted_score$single_sparse_score)+2)
-hist(predicted_score$single_sparse_score[1:n2/2], xlim = xl, main = "Distribution of the sparse score", xlab = "Sparse score", col=rgb(0.95,0.95,0.95,0.5))
-hist(predicted_score$single_sparse_score[(n2/2+1):n2], col=rgb(0.05,0.05,0.05,0.5), add=TRUE)
+xl <- c(min(DiscrScores$single_sparse_score)-2, max(DiscrScores$single_sparse_score)+2)
+hist(DiscrScores$single_sparse_score[1:n2/2], xlim = xl, main = "Distribution of the sparse score", xlab = "Sparse score", col=rgb(0.95,0.95,0.95,0.5))
+hist(DiscrScores$single_sparse_score[(n2/2+1):n2], col=rgb(0.05,0.05,0.05,0.5), add=TRUE)
 legend("topright", c("Res = 0", "Res = 1"), col = c(rgb(0.95,0.95,0.95,0.5), rgb(0.05,0.05,0.05,0.5)), lwd = 10, cex = 0.5)
 
 ## create a summary table
-single_score = c(mean(predicted_score$single_score[1:n2/2]), sd(predicted_score$single_score[1:n2/2]),
-                 mean(predicted_score$single_score[(n2/2+1):n2]), sd(predicted_score$single_score[(n2/2+1):n2]))
-single_sparse_score = c(mean(predicted_score$single_sparse_score[1:n2/2]), sd(predicted_score$single_sparse_score[1:n2/2]),
-                 mean(predicted_score$single_sparse_score[(n2/2+1):n2]), sd(predicted_score$single_sparse_score[(n2/2+1):n2]))
+single_score = c(mean(DiscrScores$single_score[1:n2/2]), sd(DiscrScores$single_score[1:n2/2]),
+                 mean(DiscrScores$single_score[(n2/2+1):n2]), sd(DiscrScores$single_score[(n2/2+1):n2]))
+single_sparse_score = c(mean(DiscrScores$single_sparse_score[1:n2/2]), sd(DiscrScores$single_sparse_score[1:n2/2]),
+                 mean(DiscrScores$single_sparse_score[(n2/2+1):n2]), sd(DiscrScores$single_sparse_score[(n2/2+1):n2]))
 
 summy_stat = rbind(single_score, single_sparse_score)
 
@@ -429,6 +434,7 @@ summy_stat = cbind(summy_stat, (summy_stat[,3]- summy_stat[,1])/(summy_stat[,2]+
 colnames(summy_stat) = c("mean", "sd", "mean", "sd", "SNR")
 
 kable(round(summy_stat, 3))
+
 ```
 
 From the plots and tables, we see that both the one-dimensional overall and sparse scores have discriminant powers to separate the two gender groups, and the sparse score seems to have better signal-to-noise ration (SNR) than the overall score.

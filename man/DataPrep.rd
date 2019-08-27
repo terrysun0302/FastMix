@@ -10,7 +10,7 @@ preparing the response variables in a format that can be directly used
 by function \code{ols.eblup.trim()}.
 }
 \usage{
-DataPrep(GeneExp, CellProp, Demo, include.demo=TRUE, w)
+DataPrep(GeneExp, CellProp, Demo, include.demo=TRUE, w="iid")
 }
 \arguments{
   \item{GeneExp}{
@@ -25,7 +25,9 @@ variables to be tested, where p is the number of covariates.
   }
   \item{include.demo}{Whether the demographical covariates should be
     included as the main effects in the model or not. Default to TRUE.}
-  \item{w}{The weight matrix.}
+  \item{w}{The weight matrix. The default value of `w` is `iid`, which
+    refers to a diagonal weighting matrix that is appropriate for
+    i.i.d. data.}
 }
 \details{
 %%  ~~ If necessary, more details than the description above ~~
@@ -66,10 +68,19 @@ stops and asks the user to reduce the complexity of the model.
 \examples{
 ## load the data example
 data(dat_train)
-w = diag(rep(1, nrow(dat_train$Demo)))
-## preparing the covariate/response
-des1 <- DataPrep(dat_train$GeneExp, dat_train$CellProp, dat_train$Demo,include.demo=TRUE, w = w)
+
+## preparing the covariate/response (the i.i.d. case)
+des1 <- DataPrep(dat_train$GeneExp, dat_train$CellProp, dat_train$Demo,include.demo=TRUE)
 dim(des1$X)
+
+## an example of the weighted case.
+nsamples <- nrow(dat_train$Demo)
+# randomly generate some weights
+tnmr <- runif(nsamples, 1, 5)     
+w = diag(tnmr)
+
+## 
+des2 <- DataPrep(dat_train$GeneExp, dat_train$CellProp, dat_train$Demo,include.demo=TRUE, w = w)
 
 }                               % end examples.
 

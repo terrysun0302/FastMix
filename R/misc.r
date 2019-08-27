@@ -267,7 +267,7 @@ robust.cov.est <- function(bmat, var.epsilon, xx, m, robust){
 #============================================================================================#
 
 ## A convenience function to generate the combined covariate matrix to fit FastMix
-DataPrep <- function(GeneExp, CellProp, Demo, include.demo=TRUE, w){ # here, w is the weight function
+DataPrep <- function(GeneExp, CellProp, Demo, include.demo=TRUE, w="iid"){ # here, w is the weight function
   m <- nrow(GeneExp); n <- nrow(Demo)
   ## assign gene names if empty
   if (is.null(rownames(GeneExp))) rownames(GeneExp) <- paste0("Gene", 1:m)
@@ -294,6 +294,9 @@ DataPrep <- function(GeneExp, CellProp, Demo, include.demo=TRUE, w){ # here, w i
   } else {
     X0 <- cbind(CellProp, Crossterms)
   }
+  ## by default, the weighting matrix is a diagonal matrix,
+  ## representing the i.i.d. data
+  if (w=="iid") w <- diag(nrow(X0))
 
   ### weighted sample
   X0 = w %*% X0
@@ -553,7 +556,7 @@ hy.ols.blup.wrapper <- function(Des, Y, var.epsilon, number, random = random, vc
 ### # here, w is the weight function. Response_idx is the idx of response variable in the Demo matrix
 ### Demo here is a vertor/matrix that contains demo information except for the Response vector, because this is the
 ### variable we want to classify.
-DataPrep_test <- function(GeneExp, CellProp, Demo, train_response, include.demo=TRUE, w){
+DataPrep_test <- function(GeneExp, CellProp, Demo, train_response, include.demo=TRUE, w="iid"){
   m <- nrow(GeneExp); n <- ncol(GeneExp)
   ## assign gene names if empty
   if (is.null(rownames(GeneExp))) rownames(GeneExp) <- paste0("Gene", 1:m)
@@ -619,6 +622,9 @@ DataPrep_test <- function(GeneExp, CellProp, Demo, train_response, include.demo=
     X0 <- cbind(CellProp, Crossterms)
   }
 
+  ## by default, the weighting matrix is a diagonal matrix,
+  ## representing the i.i.d. data
+  if (w=="iid") w <- diag(nrow(X0))
   ### weighted sample
   X0 = w %*% X0
   GeneExp = GeneExp %*% w

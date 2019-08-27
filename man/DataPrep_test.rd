@@ -5,15 +5,23 @@
   Preparing the covariates/responses for function \code{score_func()}.
 }
 \description{
-  In reality, we do not know the true response status of the testing
-  data. However, we need to create a "Response" for these subjects
+  This function is designed to help prepare the "testing" data set for
+  computing the discriminant scores and help validating a classifier
+  trained by discriminant analysis.
+
+  The difference between `DataPrep()` and `DataPrep_test()` is that in
+  the latter case, we do not know the true response status of the testing
+  data.  However, we need to create a "Response" for these subjects
   in order to do a proper standardization for the covariates.  These
   two sets of data are standardized according to two different
   "hypothetical" responses: Response==0 (Data_0), Response==1
-  (Data_1).
+  (Data_1). Due to the use of standardization in the FastMix model, the
+  processed "Response" in both `Data_0` and `Data_1` typically do not
+  equal 0 and 1; instead, they equal to $+a$ and $-a$, where $a$ is a
+  constant for all subjects, respectively.
 }
 \usage{
-  DataPrep_test(GeneExp, CellProp, Demo, train_response, include.demo=TRUE, w)
+  DataPrep_test(GeneExp, CellProp, Demo, train_response, include.demo=TRUE, w="iid")
 }
 \arguments{
   \item{GeneExp}{
@@ -29,7 +37,9 @@
   \item{train_response}{The column of reponse variable in the training data.}
   \item{include.demo}{Whether the demographical covariates should be
     included as the main effects in the model or not. Default to TRUE.}
-  \item{w}{The weight matrix.}
+  \item{w}{The weight matrix. The default value of `w` is `iid`, which
+    refers to a diagonal weighting matrix that is appropriate for
+    i.i.d. data.}
 }
 \details{
   %%  ~~ If necessary, more details than the description above ~~
@@ -68,20 +78,29 @@
 
   n2 <- nrow(dat_test$Demo)
 
-  w = diag(rep(1, n2))
-
   gnames <- rownames(dat_test$GeneExp); m <- nrow(dat_test$GeneExp)
   if (is.null(gnames)) {
     rownames(dat_test$GeneExp) <- gnames <- paste0("Gene", 1:m)
   }
 
 
-  ## preparing the covariate/response
-  test_data = DataPrep_test(dat_test$GeneExp, dat_test$CellProp, Demo=dat_test$Demo[,1], train_response = dat_train$Demo[,2], include.demo=TRUE, w)
-
+  ## preparing the covariate/response: the i.i.d. case
+  test_data = DataPrep_test(dat_test$GeneExp, dat_test$CellProp, Demo=dat_test$Demo[,1], train_response = dat_train$Demo[,2], include.demo=TRUE)
 
   Data_0 = test_data$Data_0
   Data_1 = test_data$Data_1
+
+  ## an example of the weighted case.
+  nsamples <- nrow(dat_train$Demo)
+  # randomly generate some weights
+  tnmr <- runif(nsamples, 1, 5)     
+  w = diag(tnmr)
+
+  ## 
+  test_data = DataPrep_test(dat_test$GeneExp, dat_test$CellProp,
+  Demo=dat_test$Demo[,1], train_response = dat_train$Demo[,2],
+  include.demo=TRUE, w=w)
+
 
 }                               % end examples.
 
