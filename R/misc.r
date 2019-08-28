@@ -745,14 +745,20 @@ score_func = function(mod1, Data_0, Data_1, Response_interaction_index, Response
     ### the difference would be the calculation of delta vector
 
     ### we first identify DEGs in the interaction directions
+    union_index = c()
     l = length(Response_interaction_index)
     sparse_coef = fix_coef = matrix(0, ncol = l+length(Response_idx), nrow = m)
-    fix_coef[,1:length(Response_idx)] = mod1$beta.mat[,Response_idx] ### the coef for Demo variable
+    fix_coef[,1:length(Response_idx)] = mod1$fixed.results[Response_idx,1] ### the coef for Demo variable
+    sparse_coef[,1:length(Response_idx)] = mod1$beta.mat[,Response_idx]-mod1$fixed.results[Response_idx,1]
     ### fill the coef for interaction
     for(i in 1:l){
       fix_coef[,i+length(Response_idx)] = mod1$fixed.results[Response_interaction_index[i],1]
       idx = which((mod1$re.ind.pvalue)[,Response_interaction_index[i]] < 0.05)
-      sparse_coef[idx,i+length(Response_idx)] = mod1$beta.mat[idx,i] - mod1$fixed.results[Response_interaction_index[i],1]
+      union_index = union(union_index, idx)
+
+      ## the eason for this "-" is because beta.mat is the individual coefficient (fix+ranodm)
+      sparse_coef[idx,i+length(Response_idx)] = mod1$beta.mat[idx,Response_interaction_index[i]] -
+        mod1$fixed.results[Response_interaction_index[i],1]
       ### only random effects
     }
 
@@ -770,7 +776,8 @@ score_func = function(mod1, Data_0, Data_1, Response_interaction_index, Response
     #====== step4: generate sparse multiple scores =========#
     #=======================================================#
 
-    multi_sparse_score = res * (delta_sparse_fix+delta_sparse_random) ### m by n
+    multi_sparse_score = rbind(colSums(res * (delta_sparse_fix)),
+                                        (res * delta_sparse_random)[union_index,]) ### m by n
 
 
     result = list(single_score = single_score, single_sparse_score = single_sparse_score, multi_score = multi_score, multi_sparse_score = multi_sparse_score)
@@ -807,33 +814,39 @@ score_func = function(mod1, Data_0, Data_1, Response_interaction_index, Response
     ### the difference would be the calculation of delta vector
 
     ### we first identify DEGs in the interaction directions
+    union_index = c()
     l = length(Response_interaction_index)
     sparse_coef = fix_coef = matrix(0, ncol = l+length(Response_idx), nrow = m)
-    fix_coef[,1:length(Response_idx)] = mod1$beta.mat[,Response_idx] ### the coef for Demo variable
+    fix_coef[,1:length(Response_idx)] = mod1$fixed.results[Response_idx,1] ### the coef for Demo variable
+    sparse_coef[,1:length(Response_idx)] = mod1$beta.mat[,Response_idx]-mod1$fixed.results[Response_idx,1]
     ### fill the coef for interaction
     for(i in 1:l){
       fix_coef[,i+length(Response_idx)] = mod1$fixed.results[Response_interaction_index[i],1]
       idx = which((mod1$re.ind.pvalue)[,Response_interaction_index[i]] < 0.05)
-      sparse_coef[idx,i+length(Response_idx)] = mod1$beta.mat[idx,i] - mod1$fixed.results[Response_interaction_index[i],1]
+      union_index = union(union_index, idx)
+
+      ## the eason for this "-" is because beta.mat is the individual coefficient (fix+ranodm)
+      sparse_coef[idx,i+length(Response_idx)] = mod1$beta.mat[idx,Response_interaction_index[i]] -
+        mod1$fixed.results[Response_interaction_index[i],1]
       ### only random effects
     }
 
     ### calculate the sparse score
-    delta_sparse_fix = fix_coef %*% as.matrix(Data_1$X[1:n,c(Response_idx, Response_interaction_index)+1] -
-                                                Data_0$X[1:n,c(Response_idx, Response_interaction_index)+1])
-    delta_sparse_random = sparse_coef %*%  as.matrix(Data_1$X[1:n,c(Response_idx, Response_interaction_index)+1] -
-                                                       Data_0$X[1:n,c(Response_idx, Response_interaction_index)+1])
+    delta_sparse_fix = fix_coef %*% as.matrix((Data_1$X[1:n,c(Response_idx, Response_interaction_index)+1] -
+                                                  Data_0$X[1:n,c(Response_idx, Response_interaction_index)+1]))
+    delta_sparse_random = sparse_coef %*%  as.matrix((Data_1$X[1:n,c(Response_idx, Response_interaction_index)+1] -
+                                                         Data_0$X[1:n,c(Response_idx, Response_interaction_index)+1]))
 
     delta_sparse_scale= apply(delta_sparse_fix+delta_sparse_random, 2, function(x) sqrt(sum(x^2)))
     single_sparse_score = t(res) %*% (delta_sparse_fix+delta_sparse_random)
     single_sparse_score = diag(single_sparse_score) / (delta_sparse_scale)
 
-
     #=======================================================#
     #====== step4: generate sparse multiple scores =========#
     #=======================================================#
 
-    multi_sparse_score = res * (delta_sparse_fix+delta_sparse_random) ### m by n
+    multi_sparse_score = c(colSums(res * (delta_sparse_fix)),
+                               (res * delta_sparse_random)[union_index,]) ### m by n
 
 
     result = list(single_score = single_score, single_sparse_score = single_sparse_score, multi_score = multi_score, multi_sparse_score = multi_sparse_score)
