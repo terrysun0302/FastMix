@@ -8,7 +8,8 @@
   A function for discriminant analysis after the FaxtMix analysis.
 }
 \usage{
-  score_func(mod1, Data_0, Data_1, Response_interaction_index, Response_idx)
+  score_func(mod1, Data_0, Data_1, Response_interaction_index,
+Response_idx, sig.level=0.05)
 }
 \arguments{
   \item{mod1}{
@@ -26,6 +27,11 @@
   \item{Response_idx}{
     The indexs of the resposne response variables in Data_0 and Data_1.
   }
+  \item{sig.level}{
+    By design, the sparse scores are linear combinations of genes that
+    have significant interactions with the response. `sig.level` is the
+    significance level that defines those significant genes. Default to 0.05.
+  }
 }
 \details{
   %%  ~~ If necessary, more details than the description above ~~
@@ -39,7 +45,8 @@
   }
   \item{multi_score}{Multiple summary scores using all genes.
   }
-  \item{multi_sparse_score}{Multiple summary scores using selected genes.
+  \item{multi_sparse_score}{Multiple summary scores using only genes
+    with significant interactions with the response variable.
   }
   %% ...
 }

@@ -376,14 +376,17 @@ Data_1 = test_data$Data_1
 # datasets: (a) are the same for all entries within one dataset; (b)
 # have exactly the opposite sign between these two datasets.
 
-round(table(Data_1$X[,"Res"]),3)
-round(table(Data_0$X[,"Res"]),3)
+round(head(Data_1$X[,"Res"]),4)
+round(head(Data_0$X[,"Res"]),4)
 
 ```
 
 Note that we must let the scoring function know that which variable in the testing data is the binary outcome to be classified (function `DataPrep_test()` automatically renames this variable as `Res` in the processed data, and renames all other covariates as `Vari`, $i=1,2,\dots$), and which variables are the interactions between `Res` and cell proportions.
 
-By checking the first few rows of the processed data, we find that the $5$th column is the binary response variable, and the $9, 10, 11$th columns are the interaction terms between the response and cell proportions.  This information will be used in `score_func()` to produce several discriminant scores.
+By checking the first few rows of the processed data, we find that the $5$th column is the binary response variable, and the $9, 10, 11$th columns are the interaction terms between the response and cell proportions.  This information will be used in `score_func()` to produce several discriminant scores.  the `single_score` (one dimensional) and `multi_score` (5,000-dimensional) are computed from *all genes* based on the theory of linear discriminant analysis; `single_sparse_score` (one dimensional) and `multi_sparse_score` are linear combinations of genes with significant interactions with the response variable. 
+
+Note that by selecting a more stringent significant level (via the `sig.level` parameter in `score_func()`) in `DiscrScores2`, we obtain a sparse discriminant score based on much **fewer** genes.
+
 
 ```{r score2, include=TRUE, echo=TRUE, results='asis'}
 #================================================================================#
@@ -400,22 +403,36 @@ kable(round(head(Data_0$X),2))
 ### the predicted score using main data set
 DiscrScores = score_func(mod1, Data_0, Data_1, Response_interaction_index = c(9,10,11), Response_idx=5)
 
+## we can use a more stringent significant level to select fewer
+## features in the sparse discriminant score
+DiscrScores2 = score_func(mod1, Data_0, Data_1, Response_interaction_index = c(9,10,11), Response_idx=5, sig.level=0.005)
+
+## check the number of selected sig. interaction genes
+nrow(DiscrScores$multi_sparse_score)        #797 sig. genes
+nrow(DiscrScores2$multi_sparse_score)       #only 121 sig. genes
+
 
 ```
 
 Finally, we show some summary plots and tables for the classification results. 
 
-```{r score2-summary, include=TRUE, echo=TRUE, results='asis', fig.width=10, fig.height=5}
+```{r score2-summary, include=TRUE, echo=TRUE, results='asis', fig.width=5, fig.height=15}
 
-par(mfrow=c(1,2))
+par(mfrow=c(3,1))
 xl <- c(min(DiscrScores$single_score)-2, max(DiscrScores$single_score)+2)
 hist(DiscrScores$single_score[1:n2/2], xlim = xl, main = "Distribution of the overall score", xlab = "Overall score", col=rgb(0.95,0.95,0.95,0.5))
 hist(DiscrScores$single_score[(n2/2+1):n2], col=rgb(0.05,0.05,0.05,0.5), add=TRUE)
 legend("topright", c("Res = 0", "Res = 1"), col = c(rgb(0.95,0.95,0.95,0.5), rgb(0.05,0.05,0.05,0.5)), lwd = 10, cex = 0.5)
 
 xl <- c(min(DiscrScores$single_sparse_score)-2, max(DiscrScores$single_sparse_score)+2)
-hist(DiscrScores$single_sparse_score[1:n2/2], xlim = xl, main = "Distribution of the sparse score", xlab = "Sparse score", col=rgb(0.95,0.95,0.95,0.5))
+hist(DiscrScores$single_sparse_score[1:n2/2], xlim = xl, main = "Distribution of the sparse score 1", xlab = "Sparse score", col=rgb(0.95,0.95,0.95,0.5))
 hist(DiscrScores$single_sparse_score[(n2/2+1):n2], col=rgb(0.05,0.05,0.05,0.5), add=TRUE)
+legend("topright", c("Res = 0", "Res = 1"), col = c(rgb(0.95,0.95,0.95,0.5), rgb(0.05,0.05,0.05,0.5)), lwd = 10, cex = 0.5)
+
+## the second sparse score; with fewer features
+xl <- c(min(DiscrScores2$single_sparse_score)-2, max(DiscrScores2$single_sparse_score)+2)
+hist(DiscrScores2$single_sparse_score[1:n2/2], xlim = xl, main = "Distribution of the sparse score 2", xlab = "Sparse score", col=rgb(0.95,0.95,0.95,0.5))
+hist(DiscrScores2$single_sparse_score[(n2/2+1):n2], col=rgb(0.05,0.05,0.05,0.5), add=TRUE)
 legend("topright", c("Res = 0", "Res = 1"), col = c(rgb(0.95,0.95,0.95,0.5), rgb(0.05,0.05,0.05,0.5)), lwd = 10, cex = 0.5)
 
 ## create a summary table
@@ -423,20 +440,24 @@ single_score = c(mean(DiscrScores$single_score[1:n2/2]), sd(DiscrScores$single_s
                  mean(DiscrScores$single_score[(n2/2+1):n2]), sd(DiscrScores$single_score[(n2/2+1):n2]))
 single_sparse_score = c(mean(DiscrScores$single_sparse_score[1:n2/2]), sd(DiscrScores$single_sparse_score[1:n2/2]),
                  mean(DiscrScores$single_sparse_score[(n2/2+1):n2]), sd(DiscrScores$single_sparse_score[(n2/2+1):n2]))
-
-summy_stat = rbind(single_score, single_sparse_score)
+single_sparse_score2 = c(mean(DiscrScores2$single_sparse_score[1:n2/2]), sd(DiscrScores2$single_sparse_score[1:n2/2]),
+                 mean(DiscrScores2$single_sparse_score[(n2/2+1):n2]), sd(DiscrScores2$single_sparse_score[(n2/2+1):n2]))
+summy_stat = rbind(single_score, single_sparse_score, single_sparse_score2)
 
 ### signal to noise ratio
 summy_stat = cbind(summy_stat, (summy_stat[,3]- summy_stat[,1])/(summy_stat[,2]+summy_stat[,4])/2/sqrt(4/n2))
-colnames(summy_stat) = c("mean", "sd", "mean", "sd", "SNR")
+colnames(summy_stat) = c("mean0", "sd0", "mean1", "sd1", "SNR")
+rownames(summy_stat) = c("Using all genes",
+                         paste0("Sparse score 1 (", nrow(DiscrScores$multi_sparse_score), " genes)"),
+                         paste0("Sparse score 2 (", nrow(DiscrScores2$multi_sparse_score), " genes)"))
 
 kable(round(summy_stat, 3))
 
 ```
 
-From the plots and tables, we see that both the one-dimensional overall and sparse scores have discriminant powers to separate the two gender groups, and the sparse score seems to have better signal-to-noise ration (SNR) than the overall score.
+From the plots and tables, we see that both the one-dimensional overall and sparse scores have discriminant powers to separate the two gender groups, and the sparse score seems to have better signal-to-noise ration (SNR) than the overall score.  While sparse score 2 has slightly lower SNR compared with sparse score 1, it still has good discriminant power and can be a practical option (because it uses much fewer features) in real world applications.
 
-These two scores, as well as their multivariate counterparts (entries `multi_score` and `multi_sparse_score` in object `DiscrScores`), can be used in linear or nonlinear machine learning algorithms to build the actual classifiers for the binary outcome.
+These 1-dimensional scores, as well as their multivariate counterparts (entries `multi_score` and `multi_sparse_score` in objects `DiscrScores` and `DiscrScores2`), can be used in linear or nonlinear machine learning algorithms to build the actual classifiers for the binary outcome.
 
 
 ## Real data example
