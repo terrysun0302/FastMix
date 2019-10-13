@@ -175,7 +175,7 @@ score_func = function(mod1, Data_0, Data_1, Response_interaction_index, Response
   if(m_train != m){
     stop("The number of genes is different, please check!")
   }
-  if (length(Response_idx) !=1) stop("You must select a single Response variable.")
+  if (length(Response_idx) !=1 & !is.null(Response_idx)) stop("You must select a single Response variable or set it as null.")
   ### more than one sybjects in the test data
   if(n > 1) {
     ### because the data is stacked by ID, we also need to argument the coef_matrix
@@ -210,19 +210,38 @@ score_func = function(mod1, Data_0, Data_1, Response_interaction_index, Response
     ### we first identify DEGs in the interaction directions
     union_index = c()
     l = length(Response_interaction_index)
-    sparse_coef = fix_coef = matrix(0, ncol = l+length(Response_idx), nrow = m)
-    fix_coef[,1:length(Response_idx)] = mod1$fixed.results[Response_idx,1] ### the coef for Demo variable
-    sparse_coef[,1:length(Response_idx)] = mod1$beta.mat[,Response_idx]-mod1$fixed.results[Response_idx,1]
-    ### fill the coef for interaction
-    for(i in 1:l){
-      fix_coef[,i+length(Response_idx)] = mod1$fixed.results[Response_interaction_index[i],1]
-      idx = which((mod1$re.ind.pvalue)[,Response_interaction_index[i]] < sig.level)
-      union_index = union(union_index, idx)
 
-      ## the reason for this "-" is because beta.mat is the individual
-      ## coefficient (fix+ranodm)
-      sparse_coef[idx,i+length(Response_idx)] = mod1$beta.mat[idx,Response_interaction_index[i]] - mod1$fixed.results[Response_interaction_index[i],1]
-      ### only random effects
+    ### here, we need to consider the case when there is no res in te mdoel
+    if(is.null(Response_idx)){
+      sparse_coef = fix_coef = matrix(0, ncol = l, nrow = m)
+      #fix_coef[,1:length(Response_idx)] = mod1$fixed.results[Response_idx,1] ### the coef for Demo variable
+      #sparse_coef[,1:length(Response_idx)] = mod1$beta.mat[,Response_idx]-mod1$fixed.results[Response_idx,1]
+      ### fill the coef for interaction
+      for(i in 1:l){
+        fix_coef[,i] = mod1$fixed.results[Response_interaction_index[i],1]
+        idx = which((mod1$re.ind.pvalue)[,Response_interaction_index[i]] < sig.level)
+        union_index = union(union_index, idx)
+
+        ## the reason for this "-" is because beta.mat is the individual
+        ## coefficient (fix+ranodm)
+        sparse_coef[idx,i] = mod1$beta.mat[idx,Response_interaction_index[i]] - mod1$fixed.results[Response_interaction_index[i],1]
+        ### only random effects
+      }
+    } else{
+      sparse_coef = fix_coef = matrix(0, ncol = l+length(Response_idx), nrow = m)
+      fix_coef[,1:length(Response_idx)] = mod1$fixed.results[Response_idx,1] ### the coef for Demo variable
+      sparse_coef[,1:length(Response_idx)] = mod1$beta.mat[,Response_idx]-mod1$fixed.results[Response_idx,1]
+      ### fill the coef for interaction
+      for(i in 1:l){
+        fix_coef[,i+length(Response_idx)] = mod1$fixed.results[Response_interaction_index[i],1]
+        idx = which((mod1$re.ind.pvalue)[,Response_interaction_index[i]] < sig.level)
+        union_index = union(union_index, idx)
+
+        ## the reason for this "-" is because beta.mat is the individual
+        ## coefficient (fix+ranodm)
+        sparse_coef[idx,i+length(Response_idx)] = mod1$beta.mat[idx,Response_interaction_index[i]] - mod1$fixed.results[Response_interaction_index[i],1]
+        ### only random effects
+      }
     }
 
     ### calculate the sparse score
@@ -279,19 +298,37 @@ score_func = function(mod1, Data_0, Data_1, Response_interaction_index, Response
     ### we first identify DEGs in the interaction directions
     union_index = c()
     l = length(Response_interaction_index)
-    sparse_coef = fix_coef = matrix(0, ncol = l+length(Response_idx), nrow = m)
-    fix_coef[,1:length(Response_idx)] = mod1$fixed.results[Response_idx,1] ### the coef for Demo variable
-    sparse_coef[,1:length(Response_idx)] = mod1$beta.mat[,Response_idx]-mod1$fixed.results[Response_idx,1]
-    ### fill the coef for interaction
-    for(i in 1:l){
-      fix_coef[,i+length(Response_idx)] = mod1$fixed.results[Response_interaction_index[i],1]
-      idx = which((mod1$re.ind.pvalue)[,Response_interaction_index[i]] < sig.level)
-      union_index = union(union_index, idx)
 
-      ## the eason for this "-" is because beta.mat is the individual coefficient (fix+ranodm)
-      sparse_coef[idx,i+length(Response_idx)] = mod1$beta.mat[idx,Response_interaction_index[i]] -
-        mod1$fixed.results[Response_interaction_index[i],1]
-      ### only random effects
+    if(is.null(Response_idx)){
+      sparse_coef = fix_coef = matrix(0, ncol = l+length(Response_idx), nrow = m)
+      #fix_coef[,1:length(Response_idx)] = mod1$fixed.results[Response_idx,1] ### the coef for Demo variable
+      #sparse_coef[,1:length(Response_idx)] = mod1$beta.mat[,Response_idx]-mod1$fixed.results[Response_idx,1]
+      ### fill the coef for interaction
+      for(i in 1:l){
+        fix_coef[,i+length(Response_idx)] = mod1$fixed.results[Response_interaction_index[i],1]
+        idx = which((mod1$re.ind.pvalue)[,Response_interaction_index[i]] < sig.level)
+        union_index = union(union_index, idx)
+
+        ## the eason for this "-" is because beta.mat is the individual coefficient (fix+ranodm)
+        sparse_coef[idx,i+length(Response_idx)] = mod1$beta.mat[idx,Response_interaction_index[i]] -
+          mod1$fixed.results[Response_interaction_index[i],1]
+        ### only random effects
+      }
+    } else{
+        sparse_coef = fix_coef = matrix(0, ncol = l+length(Response_idx), nrow = m)
+        fix_coef[,1:length(Response_idx)] = mod1$fixed.results[Response_idx,1] ### the coef for Demo variable
+        sparse_coef[,1:length(Response_idx)] = mod1$beta.mat[,Response_idx]-mod1$fixed.results[Response_idx,1]
+        ### fill the coef for interaction
+        for(i in 1:l){
+          fix_coef[,i+length(Response_idx)] = mod1$fixed.results[Response_interaction_index[i],1]
+          idx = which((mod1$re.ind.pvalue)[,Response_interaction_index[i]] < sig.level)
+          union_index = union(union_index, idx)
+
+          ## the eason for this "-" is because beta.mat is the individual coefficient (fix+ranodm)
+          sparse_coef[idx,i+length(Response_idx)] = mod1$beta.mat[idx,Response_interaction_index[i]] -
+            mod1$fixed.results[Response_interaction_index[i],1]
+          ### only random effects
+        }
     }
 
     ### calculate the sparse score

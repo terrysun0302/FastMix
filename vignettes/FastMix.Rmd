@@ -217,6 +217,9 @@ data(dat_train)                       #loads the sample data
 ## data in one step. It takes about 10~15 seconds to finish computing
 system.time(mod1 <- FastMix(dat_train$GeneExp, dat_train$CellProp, dat_train$Demo, independent = F))
 
+### add this exmaple for later use: test score_func when 'include.demo = F'
+system.time(mod1_F <- FastMix(dat_train$GeneExp, dat_train$CellProp, dat_train$Demo, independent = F, include.demo = F))
+
 ```
 
 Now let us summarize the results. First, let us check the fixed effects (the overall association between the covariates, their interactions, and the transcriptome
@@ -367,9 +370,14 @@ if (is.null(gnames)) {
 ### this code use the data in main simulation. The difference is that Demo includes other variable than response 
 test_data = DataPrep_test(dat_test$GeneExp, dat_test$CellProp, Demo=dat_test$Demo[,1], train_response = dat_train$Demo[,2], include.demo=TRUE)
 
+### here, we show an exmaple of test data set with include_demo = FALSE
+test_data_F = DataPrep_test(dat_test$GeneExp, dat_test$CellProp, Demo=dat_test$Demo[,1], train_response = dat_train$Demo[,2], include.demo=FALSE)
+
 Data_0 = test_data$Data_0
 Data_1 = test_data$Data_1
 
+Data_0_F = test_data_F$Data_0
+Data_1_F = test_data_F$Data_1
 # Due to the way we assign hypothetical Response values, all entries
 # in Data_0 has "Response==0", and all entries in Data_0 has
 # one. Therefore, we expect the standardized Response from these two
@@ -379,6 +387,9 @@ Data_1 = test_data$Data_1
 round(head(Data_1$X[,"Res"]),4)
 round(head(Data_0$X[,"Res"]),4)
 
+###when include.demo=FALSE, try the following code
+round(head(Data_1_F$X[,"Cell1.Res"]),4)
+round(head(Data_0_F$X[,"Cell1.Res"]),4)
 ```
 
 Note that we must let the scoring function know that which variable in the testing data is the binary outcome to be classified (function `DataPrep_test()` automatically renames this variable as `Res` in the processed data, and renames all other covariates as `Vari`, $i=1,2,\dots$), and which variables are the interactions between `Res` and cell proportions.
@@ -401,11 +412,13 @@ Note that by selecting a more stringent significant level (via the `sig.level` p
 kable(round(head(Data_0$X),2))
 
 ### the predicted score using main data set
-DiscrScores = score_func(mod1, Data_0, Data_1, Response_interaction_index = c(9,10,11), Response_idx=5)
+DiscrScores = score_func(mod1=mod1, Data_0, Data_1, Response_interaction_index = c(9,10,11), Response_idx=5)
 
+###this example shows how to use the score function with include_demo = FALSE
+DiscrScores_F = score_func(mod1=mod1_F, Data_0_F, Data_1_F, Response_interaction_index = c(7,8,9), Response_idx=NULL)
 ## we can use a more stringent significant level to select fewer
 ## features in the sparse discriminant score
-DiscrScores2 = score_func(mod1, Data_0, Data_1, Response_interaction_index = c(9,10,11), Response_idx=5, sig.level=0.005)
+DiscrScores2 = score_func(mod1=mod1, Data_0, Data_1, Response_interaction_index = c(9,10,11), Response_idx=5, sig.level=0.005)
 
 ## check the number of selected sig. interaction genes
 nrow(DiscrScores$multi_sparse_score)        #797 sig. genes
