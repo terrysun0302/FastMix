@@ -258,7 +258,7 @@ score_func = function(mod1, Data_0, Data_1, Response_interaction_index, Response
     #====== step4: generate sparse multiple scores =========#
     #=======================================================#
 
-    multi_sparse_score = rbind(colSums(res * (delta_sparse_fix)),
+    multi_sparse_score = rbind("fixed"=colSums(res * (delta_sparse_fix)),
                                         (res * delta_sparse_random)[union_index,]) ### m by n
 
 
@@ -345,7 +345,7 @@ score_func = function(mod1, Data_0, Data_1, Response_interaction_index, Response
     #====== step4: generate sparse multiple scores =========#
     #=======================================================#
 
-    multi_sparse_score = c(colSums(res * (delta_sparse_fix)),
+    multi_sparse_score = c("fixed"=colSums(res * (delta_sparse_fix)),
                                (res * delta_sparse_random)[union_index,]) ### m by n
 
 
