@@ -2,6 +2,9 @@
 #======================= some helper functions for prediction score =========================#
 #============================================================================================#
 
+### log 1: 10/11/2019: add an argument for Demo transformation
+###        10/11/2019: add a section for N-fold cv
+
 # see the vignettes for an concrete example
 
 ### function 1
@@ -21,7 +24,10 @@
 ### matrix Demo here is a vertor/matrix that contains demo information
 ### except for the Response vector, because this is the variable we
 ### want to classify.
-DataPrep_test <- function(GeneExp, CellProp, Demo, train_response, include.demo=TRUE, w="iid"){
+DataPrep_test <- function(GeneExp, CellProp, Demo, train_Demo, train_response, include.demo=TRUE, w="iid"){
+  ### add the case for n = 1
+
+  GeneExp = as.matrix(GeneExp)
   m <- nrow(GeneExp); n <- ncol(GeneExp)
   ## assign gene names if empty
   if (is.null(rownames(GeneExp))) rownames(GeneExp) <- paste0("Gene", 1:m)
@@ -40,9 +46,17 @@ DataPrep_test <- function(GeneExp, CellProp, Demo, train_response, include.demo=
       colnames(Demo) <- paste0("Var", 1:ncol(Demo))
     }
 
-    ## standardize all clinical covariates
-    Demo0 <- scale(Demo)
+    ## standardize all clinical covariates: can not do it directly
+    mean_sd = attributes(scale(train_Demo))
+    for(i in 1:mean_sd$dim[2]){
+      me = mean_sd$`scaled:center`[i]
+      se = mean_sd$`scaled:scale`[i]
+      Demo[,i] = (Demo[,i] - me) / se
+    }
+    Demo0 = Demo
+    #Demo0 <- scale(Demo)
   }
+
 
   ### by definition,
   response_impute = sort(unique(scale(train_response)))
@@ -79,7 +93,11 @@ DataPrep_test <- function(GeneExp, CellProp, Demo, train_response, include.demo=
   Crossterms <- sapply(1:nrow(Crossterms.idx), function(l) {
     k <- Crossterms.idx[l,1]; p <- Crossterms.idx[l,2]
     CellProp[,k] * Demo0_0[,p]
-  }); colnames(Crossterms) <- rownames(Crossterms.idx)
+  })
+  if(is.null(dim(Crossterms))){
+    Crossterms = t(as.matrix(Crossterms))
+  }
+  colnames(Crossterms) <- rownames(Crossterms.idx)
   ## combine all variables
   if (include.demo==TRUE){
     X0 <- cbind(CellProp, Demo0_0, Crossterms)
@@ -116,7 +134,11 @@ DataPrep_test <- function(GeneExp, CellProp, Demo, train_response, include.demo=
   Crossterms <- sapply(1:nrow(Crossterms.idx), function(l) {
     k <- Crossterms.idx[l,1]; p <- Crossterms.idx[l,2]
     CellProp[,k] * Demo0_1[,p]
-  }); colnames(Crossterms) <- rownames(Crossterms.idx)
+  })
+  if(is.null(dim(Crossterms))){
+    Crossterms = t(as.matrix(Crossterms))
+  }
+  colnames(Crossterms) <- rownames(Crossterms.idx)
   ## combine all variables
   if (include.demo==TRUE){
     X0 <- cbind(CellProp, Demo0_1, Crossterms)

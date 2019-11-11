@@ -368,10 +368,12 @@ if (is.null(gnames)) {
 #test_data = DataPrep_test(dat_test$GeneExp, dat_test$CellProp, Demo=NULL, train_response = dat$Demo, include.demo=TRUE, w)
 
 ### this code use the data in main simulation. The difference is that Demo includes other variable than response 
-test_data = DataPrep_test(dat_test$GeneExp, dat_test$CellProp, Demo=dat_test$Demo[,1], train_response = dat_train$Demo[,2], include.demo=TRUE)
+test_data = DataPrep_test(dat_test$GeneExp, dat_test$CellProp, Demo=dat_test$Demo[,1], 
+                          train_Demo = dat_train$Demo[,1], train_response = dat_train$Demo[,2], include.demo=TRUE)
 
 ### here, we show an exmaple of test data set with include_demo = FALSE
-test_data_F = DataPrep_test(dat_test$GeneExp, dat_test$CellProp, Demo=dat_test$Demo[,1], train_response = dat_train$Demo[,2], include.demo=FALSE)
+test_data_F = DataPrep_test(dat_test$GeneExp, dat_test$CellProp, Demo=dat_test$Demo[,1], 
+                            train_Demo = dat_train$Demo[,1], train_response = dat_train$Demo[,2], include.demo=FALSE)
 
 Data_0 = test_data$Data_0
 Data_1 = test_data$Data_1
