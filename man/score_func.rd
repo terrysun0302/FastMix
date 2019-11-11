@@ -46,7 +46,9 @@ Response_idx, sig.level=0.05)
   \item{multi_score}{Multiple summary scores using all genes.
   }
   \item{multi_sparse_score}{Multiple summary scores using only genes
-    with significant interactions with the response variable.
+    with significant interactions with the response variable. Note that
+    the first row (with rowname 'fixed') represents the collective
+    discriminant information of the fixed effects.
   }
   %% ...
 }
